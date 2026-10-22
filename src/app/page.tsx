@@ -1,13 +1,7 @@
-import {getGames} from "@/services/rawg.service";
-
-
+import SwipeContainer from "@/components/SwipeContainer";
 
 
 export default async function Home() {
-
-    const games = await getGames()
-    console.log(games)
-  return (
-    <div></div>
-  )
+    return <SwipeContainer />
 }
+

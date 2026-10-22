@@ -28,12 +28,15 @@ export function mapRawgToGame(game: RawgGame): GameTypes {
 }
 
 export async function getGames(): Promise<GameTypes[]> {
-    const apiKey = process.env.RAWG_API_KEY
+    const apiKey = process.env.NEXT_PUBLIC_RAWG_API_KEY
     if (!apiKey) {
         throw new Error('RAWG_API_KEY is missing')
     }
     const response = await fetch(`https://api.rawg.io/api/games?key=${apiKey}`)
 
+    if (!response.ok) {
+        throw new Error(`RAWG request failed: HTTP ${response.status}`)
+    }
         const data = await response.json()
 
         return data.results.map(mapRawgToGame)
