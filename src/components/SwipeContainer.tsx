@@ -11,18 +11,20 @@ export default function SwipeContainer() {
     const [error, setError] = useState<string | null>(null);
     const [page, setPage] = useState(1);
     const [isLoading, setIsLoading] = useState(true);
+    const [hasMore, setHasMore] = useState(true)
 
     useEffect(() => {
         async function loadGames() {
 
-            if ( games.length > 0 ) {
-                return
-            }
+            if ( games.length > 0 || !hasMore ) return
 
             setIsLoading(true);
 
             try {
                 const result = await getGames(page);
+                if ( result.length === 0 )  {
+                  return setHasMore(false)
+                }
                 setGames(result);
                 setPage(page + 1)
             } catch {
@@ -33,7 +35,7 @@ export default function SwipeContainer() {
         }
 
         void loadGames();
-    }, [games.length, page, setGames]);
+    }, [games.length, page, setGames, hasMore]);
     return (
         <div className="flex items-center justify-center min-h-screen bg-sky-50 overflow-hidden">
         {error != null ? (
