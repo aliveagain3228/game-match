@@ -15,6 +15,8 @@ export default function GameCard({game, onLike, onDislike, onUndo}: GameCardProp
     const rotate = useTransform(x, [-200, 200], [-18, 18])
     const overlayOpacity = useTransform(x, [-150, 0, 150], [0.6, 0, 0.6])
     const overlayColor = useTransform(x, [-150, 0, 150], ["#e11d48", "#000000", "#10b981"])
+    const GameGenres = game.genres.slice(0, 2).join(', ')
+    const GamePlatforms = game.platforms.slice(0, 2).join(', ')
 
     return (
             <div className="relative w-[90vw] max-w-sm flex flex-col">
@@ -50,10 +52,33 @@ export default function GameCard({game, onLike, onDislike, onUndo}: GameCardProp
                         style={{ opacity: overlayOpacity, backgroundColor: overlayColor }}
                     />
                     <div className="absolute inset-0 bg-gradient-to-t from-sky-950/90 via-sky-900/20 to-transparent"></div>
-                    <h2 className="absolute bottom-6 left-6 text-white text-3xl font-bold tracking-wide shadow-sm"
-                    >
-                        {game.name}
-                    </h2>
+                    <div className="absolute bottom-6 left-6">
+                        <h2 className="text-white text-3xl font-bold tracking-wide shadow-sm"
+                        >
+                            {game.name}
+                        </h2>
+                        <div className="flex gap-2 flex-wrap mt-2">
+                            <span
+                                className="bg-black/40 text-white/90 rounded-full px-3 py-1 text-sm"
+                            >
+                                {game.released}
+                            </span>
+                                {GameGenres &&
+                                    <span
+                                        className="bg-black/40 text-white/90 rounded-full px-3 py-1 text-sm"
+                                    >
+                                    {GameGenres}
+                                    </span>}
+                            {GamePlatforms &&
+                                <span
+                                    className="bg-black/40 text-white/90 rounded-full px-3 py-1 text-sm"
+                                >
+                                    {GamePlatforms}
+                                </span>}
+
+                        </div>
+                    </div>
+
                 </motion.div>
                 <div
                     className="flex justify-center items-center gap-6 mt-8"
