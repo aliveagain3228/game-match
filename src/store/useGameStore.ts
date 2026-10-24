@@ -6,6 +6,7 @@ interface GameState {
     likedGames: GameTypes[],
     dislikedGames: GameTypes[],
     history: { game: GameTypes; action: "like" | "dislike" }[]
+    addGames: ( newGames: GameTypes[] ) => void
 
     setGames: (games: GameTypes[]) => void
     swipeRight: () => void
@@ -20,6 +21,9 @@ export const useGameStore = create<GameState>()((set) => ({
     history: [],
 
     setGames: (games) => set({games}),
+
+    addGames: (newGames) => set((state) => ({ games: [...state.games, ...newGames] })),
+
     swipeRight: () => set((state) => {
         if (state.games.length === 0) {
             return state

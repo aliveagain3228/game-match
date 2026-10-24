@@ -8,18 +8,26 @@ import { socket} from "@/sockets";
 
 
 export default function SwipeContainer() {
-    const {games, setGames, swipeRight, swipeLeft, undoSwipe} = useGameStore();
+    const {games, addGames, swipeRight, swipeLeft, undoSwipe} = useGameStore();
     const [error, setError] = useState<string | null>(null);
     const [page, setPage] = useState(1);
     const [isLoading, setIsLoading] = useState(true);
     const [hasMore, setHasMore] = useState(true)
+    const [roomId, setRoomId] = useState<string | null>(null);
 
     useEffect(() => {
 
+        const params = new URLSearchParams(window.location.search)
+        let currentRoom = params.get('room')
 
+        if (!currentRoom) {
+            currentRoom = Math.random().toString(36).substring(2, 8)
+            window.history.replaceState(null, "", `?room=${currentRoom}`)
+        }
 
+        setRoomId(currentRoom)
         socket.connect()
-        socket.emit('join_room', { roomId: 'test-room-123' })
+        socket.emit('join_room', { roomId: currentRoom })
 
         return () => {
             socket.disconnect()
@@ -29,7 +37,7 @@ export default function SwipeContainer() {
     useEffect(() => {
         async function loadGames() {
 
-            if ( games.length > 0 || !hasMore ) return
+            if ( games.length > 3 || !hasMore ) return
 
             setIsLoading(true);
 
@@ -40,7 +48,8 @@ export default function SwipeContainer() {
                 if ( result.length === 0 )  {
                   return setHasMore(false)
                 }
-                setGames(result);
+
+                addGames(result);
                 setPage(pageToSearch + 1)
             } catch {
                 setError("The games could not be loaded. Please try again later.");
@@ -50,7 +59,22 @@ export default function SwipeContainer() {
         }
 
         void loadGames();
-    }, [games.length, page, setGames, hasMore]);
+    }, [games.length, page, addGames, hasMore]);
+
+    const handleLike = () => {
+        if (roomId && games.length > 0) {
+            socket.emit('swipe', { roomId, gameId: games[0].id, action: 'LIKE' });
+        }
+        swipeRight()
+    }
+
+    const handleDislike = () => {
+        if (roomId && games.length > 0) {
+            socket.emit('swipe', { roomId, gameId: games[0].id, action: 'DISLIKE' });
+        }
+        swipeLeft()
+    }
+
     return (
         <div className="flex items-center justify-center min-h-screen bg-sky-50 overflow-hidden">
         {error != null ? (
@@ -68,12 +92,11 @@ export default function SwipeContainer() {
                 <GameCard
                     game={games[0]}
                     key={games[0].id}
-                    onLike={swipeRight}
-                    onDislike={swipeLeft}
+                    onLike={handleLike}
+                    onDislike={handleDislike}
                     onUndo={undoSwipe}
                 />
             </AnimatePresence>
         )}
-
     </div>)
 }
