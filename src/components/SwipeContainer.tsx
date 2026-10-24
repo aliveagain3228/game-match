@@ -4,6 +4,7 @@ import {useEffect, useState} from "react";
 import {useGameStore} from "@/store/useGameStore";
 import GameCard from "./GameCard";
 import { AnimatePresence } from "framer-motion";
+import { socket} from "@/sockets";
 
 
 export default function SwipeContainer() {
@@ -14,19 +15,33 @@ export default function SwipeContainer() {
     const [hasMore, setHasMore] = useState(true)
 
     useEffect(() => {
+
+
+
+        socket.connect()
+        socket.emit('join_room', { roomId: 'test-room-123' })
+
+        return () => {
+            socket.disconnect()
+        }
+    }, [])
+
+    useEffect(() => {
         async function loadGames() {
 
             if ( games.length > 0 || !hasMore ) return
 
             setIsLoading(true);
 
+            const pageToSearch = games.length === 0 ? Math.floor(Math.random() * 100) + 1 : page
+
             try {
-                const result = await getGames(page);
+                const result = await getGames(pageToSearch);
                 if ( result.length === 0 )  {
                   return setHasMore(false)
                 }
                 setGames(result);
-                setPage(page + 1)
+                setPage(pageToSearch + 1)
             } catch {
                 setError("The games could not be loaded. Please try again later.");
             } finally {
@@ -40,7 +55,13 @@ export default function SwipeContainer() {
         <div className="flex items-center justify-center min-h-screen bg-sky-50 overflow-hidden">
         {error != null ? (
             error
-        ) : isLoading || games.length === 0 ? (
+        ) : games.length === 0 && !hasMore ? (
+            <div
+                className="text-2xl font-bold text-sky-900"
+            >
+                No more games available!
+            </div>
+            ) : isLoading || games.length === 0 ? (
             <p>Loading games...</p>
         ) : (
             <AnimatePresence mode="wait">

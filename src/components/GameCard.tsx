@@ -1,6 +1,6 @@
 import {GameTypes} from "@/services/rawg.service";
 import { motion, useMotionValue, useTransform } from "framer-motion";
-
+import { Heart, X, Undo2 } from "lucide-react";
 
 interface GameCardProps {
     game: GameTypes
@@ -87,21 +87,21 @@ export default function GameCard({game, onLike, onDislike, onUndo}: GameCardProp
                         className="w-16 h-16 flex justify-center items-center rounded-full bg-white text-slate-400 shadow-xl border border-slate-100 hover:scale-105 transition-transform font-bold text-xl"
                         onClick={onDislike}
                     >
-                        Dislike
+                        <X size="{32}" strokeWidth="{3}"/>
                     </button>
 
                     <button
                         className="w-12 h-12 flex justify-center items-center rounded-full bg-white text-sky-400 shadow-md border border-sky-50 hover:scale-105 transition-transform text-sm"
                         onClick={onUndo}
                     >
-                        Cancel
+                        <Undo2 size="{24}" strokeWidth="{3}" />
                     </button>
 
                     <button
                         className="w-16 h-16 flex justify-center items-center rounded-full bg-white text-sky-500 shadow-xl border border-sky-100 hover:scale-105 transition-transform font-bold text-xl"
                         onClick={onLike}
                     >
-                        Like
+                        <Heart fill="currenColor" size="{32}" strokeWidth="{3}" />
                     </button>
 
                 </div>

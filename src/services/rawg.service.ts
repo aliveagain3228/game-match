@@ -35,7 +35,7 @@ export async function getGames( page: number = 1 ): Promise<GameTypes[]> {
     if (!apiKey) {
         throw new Error('RAWG_API_KEY is missing')
     }
-    const response = await fetch(`https://api.rawg.io/api/games?key=${apiKey}&page=${page}&dates=2010-01-01,2026-12-31&ordering=-added`)
+    const response = await fetch(`https://api.rawg.io/api/games?key=${apiKey}&page=${page}&dates=2010-01-01,2026-12-31`)
 
     if (!response.ok) {
         throw new Error(`RAWG request failed: HTTP ${response.status}`)
