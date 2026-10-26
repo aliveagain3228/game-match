@@ -13,7 +13,7 @@ export default function SwipeContainer() {
     const [page, setPage] = useState(1);
     const [isLoading, setIsLoading] = useState(true);
     const [hasMore, setHasMore] = useState(true)
-    const [roomId, setRoomId] = useState<string | null>(null);
+    const [matchedGameId, setMatchedGameId] = useState<string | null>(null);
 
     useEffect(() => {
 
@@ -25,11 +25,16 @@ export default function SwipeContainer() {
             window.history.replaceState(null, "", `?room=${currentRoom}`)
         }
 
-        setRoomId(currentRoom)
         socket.connect()
         socket.emit('join_room', { roomId: currentRoom })
 
+        socket.on('match', (data) => {
+            console.log("WE HAVE A MATCH! GAME ID:", data.gameId)
+            setMatchedGameId(data.gameId)
+        })
+
         return () => {
+            socket.off('match')
             socket.disconnect()
         }
     }, [])
@@ -62,15 +67,17 @@ export default function SwipeContainer() {
     }, [games.length, page, addGames, hasMore]);
 
     const handleLike = () => {
-        if (roomId && games.length > 0) {
-            socket.emit('swipe', { roomId, gameId: games[0].id, action: 'LIKE' });
+        const room = new URLSearchParams(window.location.search).get('room')
+        if (room && games.length > 0) {
+            socket.emit('swipe', { roomId: room, gameId: games[0].id, action: 'LIKE' });
         }
         swipeRight()
     }
 
     const handleDislike = () => {
-        if (roomId && games.length > 0) {
-            socket.emit('swipe', { roomId, gameId: games[0].id, action: 'DISLIKE' });
+        const room = new URLSearchParams(window.location.search).get('room')
+        if (room && games.length > 0) {
+            socket.emit('swipe', { roomId: room, gameId: games[0].id, action: 'DISLIKE' });
         }
         swipeLeft()
     }
