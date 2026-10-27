@@ -15,6 +15,7 @@ export default function SwipeContainer() {
     const [hasMore, setHasMore] = useState(true)
     const [matchedGameId, setMatchedGameId] = useState<number | null>(null);
     const [isCopied, setIsCopied] = useState(false);
+    const [isSocketReady, setIsSocketReady] = useState(false);
 
     useEffect(() => {
 
@@ -34,7 +35,14 @@ export default function SwipeContainer() {
             setMatchedGameId(data.gameId)
         })
 
+        socket.on('room_setup', (data) => {
+            console.log("Server provided start page:", data.startPage)
+            setPage(data.startPage)
+            setIsSocketReady(true)
+        })
+
         return () => {
+            socket.off('room_setup')
             socket.off('match')
             socket.disconnect()
         }
@@ -42,12 +50,12 @@ export default function SwipeContainer() {
 
     useEffect(() => {
         async function loadGames() {
-
+            if (!isSocketReady) return
             if ( games.length > 3 || !hasMore ) return
 
             setIsLoading(true);
 
-            const pageToSearch = games.length === 0 ? Math.floor(Math.random() * 100) + 1 : page
+            const pageToSearch = page
 
             try {
                 const result = await getGames(pageToSearch);
@@ -65,7 +73,7 @@ export default function SwipeContainer() {
         }
 
         void loadGames();
-    }, [games.length, page, addGames, hasMore]);
+    }, [games.length, page, addGames, hasMore, isSocketReady]);
 
     const handleLike = () => {
         const room = new URLSearchParams(window.location.search).get('room')
@@ -126,7 +134,7 @@ export default function SwipeContainer() {
             <div className="absolute top-6 left-6 z-40">
                 <button
                     onClick={handleCopyCode}
-                    className="flex items-center gap-2 bg-white/80 backdrop-blur-md px-4 py-2 rounded-xl shadow-sm border border-sky-100 hover:bg-white transition-all text-sky-900 font-bold"
+                    className="flex items-center gap-2 bg-white px-4 py-2 rounded-xl shadow-md border border-sky-200 hover:bg-sky-100 hover:scale-105 transition-transform text-sky-900 font-bold"
                 >
                     {isCopied ? "✅ Code is copied" : "🔗 Copy code"}
                 </button>
