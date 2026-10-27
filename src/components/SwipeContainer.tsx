@@ -14,6 +14,7 @@ export default function SwipeContainer() {
     const [isLoading, setIsLoading] = useState(true);
     const [hasMore, setHasMore] = useState(true)
     const [matchedGameId, setMatchedGameId] = useState<number | null>(null);
+    const [isCopied, setIsCopied] = useState(false);
 
     useEffect(() => {
 
@@ -82,6 +83,15 @@ export default function SwipeContainer() {
         swipeLeft()
     }
 
+    const handleCopyCode = () => {
+        const room = new URLSearchParams(window.location.search).get('room')
+        if (room) {
+            navigator.clipboard.writeText(room);
+            setIsCopied(true)
+            setTimeout(() => setIsCopied(false), 2000)
+        }
+    }
+
     const matchedGame = likedGames.find((g) => g.id === matchedGameId)
 
     if (matchedGameId && matchedGame) {
@@ -113,6 +123,14 @@ export default function SwipeContainer() {
 
     return (
         <div className="flex items-center justify-center min-h-screen bg-sky-50 overflow-hidden">
+            <div className="absolute top-6 left-6 z-40">
+                <button
+                    onClick={handleCopyCode}
+                    className="flex items-center gap-2 bg-white/80 backdrop-blur-md px-4 py-2 rounded-xl shadow-sm border border-sky-100 hover:bg-white transition-all text-sky-900 font-bold"
+                >
+                    {isCopied ? "✅ Code is copied" : "🔗 Copy code"}
+                </button>
+            </div>
         {error != null ? (
             error
         ) : games.length === 0 && !hasMore ? (
