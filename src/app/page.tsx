@@ -24,7 +24,7 @@ export default function Home() {
     }
 
     return (
-        <div className="flex flex-col items-center justify-center min-h-screen bg-sky-950 text-white px-4">
+        <div className="flex relative flex-col items-center justify-center min-h-screen bg-sky-950 text-white px-4">
             <h1 className="text-5xl font-black text-sky-400 mb-12 text-center">
                 Game<span className="text-white">Match</span>
             </h1>
@@ -59,6 +59,10 @@ export default function Home() {
                     </button>
                 </div>
 
+            </div>
+
+            <div className="absolute bottom-6 text-sky-700 text-sm font-medium text-center w-full">
+                © {new Date().getFullYear()} Nick Koida. All rights reserved.
             </div>
 
         </div>

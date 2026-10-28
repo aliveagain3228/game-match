@@ -1,14 +1,15 @@
 'use client'
 import {getGames} from "@/services/rawg.service";
-import {useEffect, useState} from "react";
+import {useEffect, useState, useRef} from "react";
 import {useGameStore} from "@/store/useGameStore";
 import GameCard from "./GameCard";
 import { AnimatePresence } from "framer-motion";
-import { socket} from "@/sockets";
+import { socket } from "@/sockets";
+import { useRouter } from "next/navigation";
 
 
 export default function SwipeContainer() {
-    const {games, addGames, swipeRight, likedGames, swipeLeft, undoSwipe} = useGameStore();
+    const {games, addGames, swipeRight, likedGames, swipeLeft, undoSwipe, matchedGames} = useGameStore();
     const [error, setError] = useState<string | null>(null);
     const [page, setPage] = useState(1);
     const [isLoading, setIsLoading] = useState(true);
@@ -16,6 +17,10 @@ export default function SwipeContainer() {
     const [matchedGameId, setMatchedGameId] = useState<number | null>(null);
     const [isCopied, setIsCopied] = useState(false);
     const [isSocketReady, setIsSocketReady] = useState(false);
+    const [isHistoryOpen, setIsHistoryOpen] = useState(false);
+    const roomIdRef = useRef<string | null>(null);
+
+    const router = useRouter();
 
     useEffect(() => {
 
@@ -27,12 +32,19 @@ export default function SwipeContainer() {
             window.history.replaceState(null, "", `?room=${currentRoom}`)
         }
 
+        roomIdRef.current = currentRoom
+
         socket.connect()
         socket.emit('join_room', { roomId: currentRoom })
 
         socket.on('match', (data) => {
-            console.log("WE HAVE A MATCH! GAME ID:", data.gameId)
+            console.log("Server provided match game ID:", data.gameId)
             setMatchedGameId(data.gameId)
+
+            const gameToSave = useGameStore.getState().likedGames.find(g => g.id === data.gameId)
+            if (gameToSave) {
+                useGameStore.getState().addMatchedGame(gameToSave)
+            }
         })
 
         socket.on('room_setup', (data) => {
@@ -76,7 +88,7 @@ export default function SwipeContainer() {
     }, [games.length, page, addGames, hasMore, isSocketReady]);
 
     const handleLike = () => {
-        const room = new URLSearchParams(window.location.search).get('room')
+        const room = roomIdRef.current
         if (room && games.length > 0) {
             socket.emit('swipe', { roomId: room, gameId: games[0].id, action: 'LIKE' });
         }
@@ -84,7 +96,7 @@ export default function SwipeContainer() {
     }
 
     const handleDislike = () => {
-        const room = new URLSearchParams(window.location.search).get('room')
+        const room = roomIdRef.current
         if (room && games.length > 0) {
             socket.emit('swipe', { roomId: room, gameId: games[0].id, action: 'DISLIKE' });
         }
@@ -92,9 +104,9 @@ export default function SwipeContainer() {
     }
 
     const handleCopyCode = () => {
-        const room = new URLSearchParams(window.location.search).get('room')
+        const room = roomIdRef.current
         if (room) {
-            navigator.clipboard.writeText(room);
+            void navigator.clipboard.writeText(room);
             setIsCopied(true)
             setTimeout(() => setIsCopied(false), 2000)
         }
@@ -131,14 +143,67 @@ export default function SwipeContainer() {
 
     return (
         <div className="flex items-center justify-center min-h-screen bg-sky-50 overflow-hidden">
-            <div className="absolute top-6 left-6 z-40">
+
+            <div className="absolute top-0 left-0 w-full p-4 bg-sky-950/90 backdrop-blur-md flex justify-between items-center z-40 border-b border-sky-800 shadow-md">
+
+                <div className="flex gap-3">
+                    <button
+                        onClick={() => router.push('/')}
+                        className="flex items-center gap-2 text-white font-bold bg-sky-800 px-4 py-2 rounded-xl hover:bg-sky-700 transition-all"
+                    >
+                        ⬅ Lobby
+                    </button>
+                    <button
+                        onClick={handleCopyCode}
+                        className="flex items-center gap-2 bg-white px-4 py-2 rounded-xl shadow-md border border-sky-200 hover:bg-sky-100 hover:scale-105 transition-transform text-sky-900 font-bold"
+                    >
+                        {isCopied ? "✅ Copied" : "🔗 Copy Code"}
+                    </button>
+                </div>
+
                 <button
-                    onClick={handleCopyCode}
-                    className="flex items-center gap-2 bg-white px-4 py-2 rounded-xl shadow-md border border-sky-200 hover:bg-sky-100 hover:scale-105 transition-transform text-sky-900 font-bold"
+                    onClick={() => setIsHistoryOpen(true)}
+                    className="flex items-center gap-2 bg-sky-500 text-white px-5 py-2 rounded-xl font-bold hover:bg-sky-400 transition-all shadow-md"
                 >
-                    {isCopied ? "✅ Code is copied" : "🔗 Copy code"}
+                    🏆 Matches <span className="bg-sky-700 px-2 py-0.5 rounded-full text-sm">
+                    {matchedGames.length}
+                </span>
                 </button>
             </div>
+
+            {isHistoryOpen && (
+                <div className="absolute inset-0 bg-sky-950/80 backdrop-blur-sm z-50 flex justify-end">
+                    <div className="w-full max-w-md bg-white h-full shadow-2xl p-6 overflow-y-auto animate-in slide-in-from-right duration-300">
+                        <div className="flex justify-between items-center mb-8">
+                            <h2 className="text-3xl font-black text-sky-900">Our games</h2>
+                            <button
+                                onClick={() => setIsHistoryOpen(false)}
+                                className="text-2xl hover:scale-110 transition-transform"
+                            >
+                                ❌
+                            </button>
+                        </div>
+
+                        {matchedGames.length === 0 ? (
+                            <p className="text-sky-600 text-center mt-10 font-medium">You haven&apos;t found any matches yet. Keep swiping!</p>
+                        ) : (
+                            <div className="flex flex-col gap-4">
+                                {matchedGames.map(game => (
+                                    <div
+                                        key={game.id}
+                                        className="flex items-center gap-4 bg-sky-50 p-3 rounded-xl border border-sky-100"
+                                    >
+                                        {/* eslint-disable-next-line @next/next/no-img-element */}
+                                        <img src={game.background_image} alt={game.name} className="w-20 h-20 object-cover rounded-lg shadow-sm" />
+                                        <p className="font-bold text-sky-900 text-lg">{game.name}</p>
+                                    </div>
+                                    ))}
+                            </div>
+                            )}
+                    </div>
+                </div>
+            )}
+
         {error != null ? (
             error
         ) : games.length === 0 && !hasMore ? (
