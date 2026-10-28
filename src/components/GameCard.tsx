@@ -15,8 +15,6 @@ export default function GameCard({game, onLike, onDislike, onUndo}: GameCardProp
     const rotate = useTransform(x, [-200, 200], [-18, 18])
     const overlayOpacity = useTransform(x, [-150, 0, 150], [0.6, 0, 0.6])
     const overlayColor = useTransform(x, [-150, 0, 150], ["#e11d48", "#000000", "#10b981"])
-    const GameGenres = game.genres.slice(0, 2).join(', ')
-    const GamePlatforms = game.platforms.slice(0, 2).join(', ')
 
     return (
             <div className="relative w-[90vw] max-w-sm flex flex-col">
@@ -33,48 +31,70 @@ export default function GameCard({game, onLike, onDislike, onUndo}: GameCardProp
                     }}
                     drag="x"
                     dragConstraints={{ left: 0, right: 0 }}
-                    onDragEnd={( event, info) => {
+                    onDragEnd={( _, info) => {
                         if (info.offset.x > 100) {
                             onLike()
                         } else if (info.offset.x < -100) {
                             onDislike()
                         }
                     }}
-                    className="relative h-[65vh] w-full rounded-3xl shadow-2xl overflow-hidden"
+                    className="relative h-[65vh] w-full rounded-3xl shadow-2xl overflow-hidden sm:max-w-md max-w-sm"
                 >
+                    {/* eslint-disable-next-line @next/next/no-img-element */}
                     <img
                         className="absolute inset-0 w-full h-full object-cover"
                         src={game.background_image}
                         alt=""
                     />
+                    <div className="absolute inset-0 bg-gradient-to-t from-sky-950 via-sky-950/60 to-transparent pointer-events-none" />
                     <motion.div
                         className="absolute inset-0 mix-blend-overlay"
                         style={{ opacity: overlayOpacity, backgroundColor: overlayColor }}
                     />
                     <div className="absolute inset-0 bg-gradient-to-t from-sky-950/90 via-sky-900/20 to-transparent"></div>
-                    <div className="absolute bottom-6 left-6">
-                        <h2 className="text-white text-3xl font-bold tracking-wide shadow-sm"
+                    <div className="absolute bottom-28 w-full px-6 flex flex-col gap-3 pointer-events-none z-10">
+                        <h2 className="text-3xl sm:text-4xl font-black text-white leading-tight drop-shadow-md"
                         >
                             {game.name}
                         </h2>
-                        <div className="flex gap-2 flex-wrap mt-2">
-                            <span
-                                className="bg-black/40 text-white/90 rounded-full px-3 py-1 text-sm"
-                            >
-                                {game.released}
-                            </span>
-                                {GameGenres &&
-                                    <span
-                                        className="bg-black/40 text-white/90 rounded-full px-3 py-1 text-sm"
-                                    >
-                                    {GameGenres}
-                                    </span>}
-                            {GamePlatforms &&
-                                <span
-                                    className="bg-black/40 text-white/90 rounded-full px-3 py-1 text-sm"
-                                >
-                                    {GamePlatforms}
-                                </span>}
+                        <div className="flex items-center gap-3 text-sm font-bold text-sky-100">
+                            {game.rating > 0 && (
+                                <span className="bg-sky-600/80 backdrop-blur-sm px-2.5 py-1 rounded-lg shadow-sm">
+                                    {game.rating}
+                                </span>
+                            )}
+
+                            {game.released && (
+                                <span className="bg-sky-900/80 backdrop-blur-sm px-2.5 py-1 rounded-lg border border-sky-700 shadow-sm">
+                                   📅 {game.released}
+                                </span>
+                            )}
+
+                            {game.platforms && game.platforms.length > 0 && (
+                                <div className="flex flex-wrap gap-2 mt-1">
+                                    {game.platforms.slice(0, 4).map((platform) => (
+                                        <span
+                                            key={platform}
+                                            className="text-xs font-bold text-sky-950 bg-white/90 px-2 py-1 rounded-md shadow-sm"
+                                        >
+                                            {platform}
+                                        </span>
+                                    ))}
+                                </div>
+                            )}
+
+                            {game.genres && game.genres.length > 0 && (
+                                <div className="flex flex-wrap gap-1.5 mt-1">
+                                    {game.genres.slice(0, 3).map((genre) => (
+                                        <span
+                                            key={genre}
+                                            className="text-sm font-medium text-sky-300 drop-shadow-sm"
+                                        >
+                                            #{genre}
+                                        </span>
+                                    ))}
+                                </div>
+                            )}
 
                         </div>
                     </div>

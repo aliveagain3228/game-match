@@ -3,9 +3,10 @@ export interface GameTypes {
     name: string;
     background_image: string;
     rating: number;
-    genres: string[];
+    genres?: string[];
     platforms: string[];
     released: string;
+    parent_platforms?: string[];
 }
 
 interface RawgGame {
