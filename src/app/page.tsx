@@ -2,7 +2,6 @@
 
 import {useState} from 'react'
 import {useRouter} from 'next/navigation'
-import Link from 'next/link'
 
 
 
@@ -10,11 +9,12 @@ export default function Home() {
 
     const router = useRouter()
     const [joinCode, setJoinCode] = useState('')
+    const [gameFilter, setGameFilter] = useState('')
 
     const handleCreateRoom = () => {
         const newRoomCode = Math.random().toString(36).substring(2, 8)
-
-        router.push(`/room?room=${newRoomCode}`)
+        const url = `/room?room=${newRoomCode}${gameFilter ? `&filter=${gameFilter}` : ''}`
+        router.push(url)
     }
 
     const handleJoinRoom = () => {
@@ -30,6 +30,21 @@ export default function Home() {
             </h1>
 
             <div className="flex flex-col gap-6 w-full max-w-sm bg-sky-900 p-8 rounded-2xl shadow-2xl border border-sky-800">
+
+                <div className="flex flex-col gap-2 mb-2">
+                    <label className="text-sky-200 text-sm font-bold ml-1">Game mode:</label>
+                    <select
+                        value={gameFilter}
+                        onChange={(e) => setGameFilter(e.target.value)}
+                        className="w-full px-4 py-3 bg-sky-950 text-white rounded-xl outline-none focus:ring-2 focus:ring-sky-400 border border-sky-800 font-medium appearance-none cursor-pointer"
+                    >
+                        <option value="">🌍 Any games</option>
+                        <option value="coop"> 🤝 Only coop</option>
+                        <option value="multiplayer"> ⚔️ Multiplayer</option>
+                        <option value="singleplayer"> 👤 Singleplayer </option>
+                    </select>
+                </div>
+
                 <button
                     onClick={handleCreateRoom}
                     className="w-full py-4 bg-sky-500 text-white rounded-xl font-bold text-xl hover:bg-sky-400 hover:scale-105 transition-all shadow-lg"
@@ -62,7 +77,7 @@ export default function Home() {
             </div>
 
             <div className="absolute bottom-6 text-sky-700 text-sm font-medium text-center w-full">
-                © {new Date().getFullYear()} Nick Koida. All rights reserved.
+                © 2026 Nick Koida. All rights reserved.
             </div>
 
         </div>

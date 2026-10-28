@@ -31,12 +31,18 @@ export function mapRawgToGame(game: RawgGame): GameTypes {
     }
 }
 
-export async function getGames( page: number = 1 ): Promise<GameTypes[]> {
+export async function getGames( page: number = 1, filter: string = "" ): Promise<GameTypes[]> {
     const apiKey = process.env.NEXT_PUBLIC_RAWG_API_KEY
-    if (!apiKey) {
-        throw new Error('RAWG_API_KEY is missing')
-    }
-    const response = await fetch(`https://api.rawg.io/api/games?key=${apiKey}&page=${page}&dates=2010-01-01,2026-12-31`)
+    if (!apiKey) throw new Error('RAWG_API_KEY is missing')
+
+    let tagsQuery = ""
+    if (filter === "coop") tagsQuery = "&tags=coop"
+    if (filter === "multiplayer") tagsQuery = "&tags=multiplayer"
+    if (filter === "singleplayer") tagsQuery = "&tags=singleplayer"
+
+
+
+    const response = await fetch(`https://api.rawg.io/api/games?key=${apiKey}&page=${page}&dates=2010-01-01,2026-12-31${tagsQuery}`)
 
     if (!response.ok) {
         throw new Error(`RAWG request failed: HTTP ${response.status}`)

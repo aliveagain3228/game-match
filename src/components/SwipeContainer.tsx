@@ -19,23 +19,24 @@ export default function SwipeContainer() {
     const [isSocketReady, setIsSocketReady] = useState(false);
     const [isHistoryOpen, setIsHistoryOpen] = useState(false);
     const roomIdRef = useRef<string | null>(null);
+    const [activeFilter, setActiveFilter] = useState("")
 
     const router = useRouter();
 
     useEffect(() => {
 
         const params = new URLSearchParams(window.location.search)
-        let currentRoom = params.get('room')
+        const currentRoom = params.get('room') || Math.random().toString(36).substring(2, 8);
+        const currentFilter = params.get('filter') || ''
 
-        if (!currentRoom) {
-            currentRoom = Math.random().toString(36).substring(2, 8)
-            window.history.replaceState(null, "", `?room=${currentRoom}`)
+        if (!params.get('room')) {
+            window.history.replaceState(null, "", `?room=${currentRoom}${currentFilter ? `&filter=${currentFilter}` : ''}`);
         }
 
-        roomIdRef.current = currentRoom
-
+        roomIdRef.current = currentRoom;
         socket.connect()
-        socket.emit('join_room', { roomId: currentRoom })
+
+        socket.emit('join_room', { roomId: currentRoom, filter: currentFilter });
 
         socket.on('match', (data) => {
             console.log("Server provided match game ID:", data.gameId)
@@ -48,8 +49,9 @@ export default function SwipeContainer() {
         })
 
         socket.on('room_setup', (data) => {
-            console.log("Server provided start page:", data.startPage)
+            console.log("Server provided start page:", data.startPage, "and filter:", data.filter);
             setPage(data.startPage)
+            setActiveFilter(data.filter)
             setIsSocketReady(true)
         })
 
@@ -70,7 +72,7 @@ export default function SwipeContainer() {
             const pageToSearch = page
 
             try {
-                const result = await getGames(pageToSearch);
+                const result = await getGames(pageToSearch, activeFilter);
                 if ( result.length === 0 )  {
                   return setHasMore(false)
                 }
@@ -85,7 +87,7 @@ export default function SwipeContainer() {
         }
 
         void loadGames();
-    }, [games.length, page, addGames, hasMore, isSocketReady]);
+    }, [games.length, page, addGames, hasMore, isSocketReady, activeFilter]);
 
     const handleLike = () => {
         const room = roomIdRef.current
