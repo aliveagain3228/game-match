@@ -174,8 +174,9 @@ export default function SwipeContainer() {
             </div>
 
             {isHistoryOpen && (
-                <div className="absolute inset-0 bg-sky-950/80 backdrop-blur-sm z-50 flex justify-end">
-                    <div className="w-full max-w-md bg-white h-full shadow-2xl p-6 overflow-y-auto animate-in slide-in-from-right duration-300">
+                <div className="absolute inset-0 bg-sky-950/80 backdrop-blur-sm z-50 flex items-end sm:justify-end sm:items-start">
+                    <div className="w-full sm:max-w-md bg-white h-[85vh] sm:h-full rounded-t-3xl sm:rounded-none sm:rounded-l-3xl shadow-2xl p-6 overflow-y-auto animate-in slide-in-from-bottom sm:slide-in-from-right duration-300">
+                        <div className="w-12 h-1.5 bg-sky-200 rounded-full mx-auto mb-6 sm:hidden"></div>
                         <div className="flex justify-between items-center mb-8">
                             <h2 className="text-3xl font-black text-sky-900">Our games</h2>
                             <button
@@ -207,15 +208,18 @@ export default function SwipeContainer() {
             )}
 
         {error != null ? (
-            error
+            <div className="text-xl text-rose-500 font-bold bg-rose-100 px-6 py-4 rounded-2xl border border-rose-200 z-10">
+                {error}
+            </div>
         ) : games.length === 0 && !hasMore ? (
-            <div
-                className="text-2xl font-bold text-sky-900"
-            >
+            <div className="text-2xl font-bold text-sky-900 z-10">
                 No more games available!
             </div>
-            ) : isLoading || games.length === 0 ? (
-            <p>Loading games...</p>
+            ) : games.length === 0 ? (
+                <div className="flex flex-col items-center animate-pulse z-10">
+                    <div className="text-6xl mb-4">⏳</div>
+                    <p className="text-xl font-bold text-sky-900">Loading games...</p>
+                </div>
         ) : (
             <AnimatePresence mode="wait">
                 <GameCard
