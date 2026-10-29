@@ -3,6 +3,9 @@
 import {useState} from 'react'
 import {useRouter} from 'next/navigation'
 import { checkGameCount } from "@/services/rawg.service";
+import { FaWindows, FaPlaystation, FaXbox, FaUserFriends, FaGlobe, FaGamepad, FaUser} from "react-icons/fa";
+import { FaUserAstronaut} from "react-icons/fa6";
+import { GiCrossedSwords } from "react-icons/gi";
 
 
 export default function Home() {
@@ -51,8 +54,43 @@ export default function Home() {
     }
 
     return (
-        <div className="flex relative flex-col items-center justify-center min-h-screen bg-sky-950 text-white px-4">
-            <h1 className="text-5xl font-black text-sky-400 mb-12 text-center">
+        <div className="flex relative flex-col items-center justify-center min-h-screen bg-sky-950 text-white px-4 pt-24 pb-12">
+
+            <header className="fixed top-0 left-0 w-full h-16 bg-sky-950/80 backdrop-blur-md border-b border-sky-800 z-50 flex items-center justify-between px-4 sm:px-8">
+
+                <div
+                    onClick={() => router.push('/')}
+                    className="flex items-center gap-3 font-black text-xl tracking-tight cursor-pointer hover:scale-105 transition-transform">
+                    <div className="w-9 h-9 rounded-full bg-sky-500 flex items-center justify-center shadow-[0_0_15px_rgba(14,165,233,0.5)]">
+                        <FaGamepad className="text-sky-950" size={20} />
+                    </div>
+                    <span className="text-sky-400 hidden sm:block">Game<span className="text-white">Match</span></span>
+                </div>
+
+                <div className="flex items-center gap-1 sm:gap-2 overflow-x-auto no-scrollbar max-w-[50%] sm:max-w-none">
+                    <button className="px-3 sm:px-4 py-1.5 sm:py-2 bg-sky-500 text-sky-950 rounded-full font-extrabold text-xs sm:text-sm shadow-lg flex items-center gap-1.5 cursor-default shrink-0">
+                        🎮 Games
+                    </button>
+                    <button disabled className="px-3 sm:px-4 py-1.5 sm:py-2 bg-sky-900/50 text-sky-400/60 rounded-full font-bold text-xs sm:text-sm border border-sky-800/50 cursor-not-allowed flex items-center gap-1.5 shrink-0">
+                        🎬 Movies <span className="hidden sm:inline-block text-[10px] bg-sky-950 px-1.5 py-0.5 rounded text-sky-500">Soon</span>
+                    </button>
+                    <button disabled className="px-3 sm:px-4 py-1.5 sm:py-2 bg-sky-900/50 text-sky-400/60 rounded-full font-bold text-xs sm:text-sm border border-sky-800/50 cursor-not-allowed flex items-center gap-1.5 shrink-0">
+                        🍿 Cartoons <span className="hidden sm:inline-block text-[10px] bg-sky-950 px-1.5 py-0.5 rounded text-sky-500">Soon</span>
+                    </button>
+                    <button disabled className="px-3 sm:px-4 py-1.5 sm:py-2 bg-sky-900/50 text-sky-400/60 rounded-full font-bold text-xs sm:text-sm border border-sky-800/50 cursor-not-allowed flex items-center gap-1.5 shrink-0">
+                        📚 Books <span className="hidden sm:inline-block text-[10px] bg-sky-950 px-1.5 py-0.5 rounded text-sky-500">Soon</span>
+                    </button>
+                </div>
+
+                <div className="flex items-center gap-3">
+                    <button className="w-9 h-9 rounded-full bg-sky-900 border border-sky-700 flex items-center justify-center hover:bg-sky-700 hover:text-white text-sky-400 transition-colors shadow-sm">
+                        <FaUser size={14} />
+                    </button>
+                </div>
+            </header>
+
+
+            <h1 className="text-5xl font-black text-sky-400 mb-12 text-center drop-shadow-lg">
                 Game<span className="text-white">Match</span>
             </h1>
 
@@ -118,30 +156,62 @@ export default function Home() {
 
                             <div>
                                 <label className="text-sky-200 text-sm font-bold ml-1 mb-2 block">Game Mode:</label>
-                                <select
-                                    value={mode}
-                                    onChange={(e) => setMode(e.target.value)}
-                                    className="w-full px-4 py-3 bg-sky-950 text-white rounded-xl outline-none focus:ring-2 focus:ring-sky-400 border border-sky-800 font-medium appearance-none cursor-pointer"
-                                >
-                                    <option value="">🌍 Any</option>
-                                    <option value="co-op">🤝 Co-op</option>
-                                    <option value="multiplayer">⚔️ Multiplayer</option>
-                                    <option value="singleplayer">👤 Singleplayer</option>
-                                </select>
+                                <div className="grid grid-cols-2 gap-2">
+                                    <button
+                                        onClick={() => setMode("")}
+                                        className={`flex items-center justify-center gap-2 py-3 rounded-xl font-bold transition-all border ${mode === "" ? "bg-sky-500 text-white border-sky-400 shadow-lg" : "bg-sky-950 text-sky-400 border-sky-800 hover:bg-sky-800"}`}
+                                    >
+                                        <FaGlobe size={16} /> Any
+                                    </button>
+                                    <button
+                                        onClick={() => setMode("co-op")}
+                                        className={`flex items-center justify-center gap-2 py-3 rounded-xl font-bold transition-all border ${mode === "co-op" ? "bg-sky-500 text-white border-sky-400 shadow-lg" : "bg-sky-950 text-sky-400 border-sky-800 hover:bg-sky-800"}`}
+                                    >
+                                        <FaUserFriends size={16} /> Co-op
+                                    </button>
+                                    <button
+                                        onClick={() => setMode("multiplayer")}
+                                        className={`flex items-center justify-center gap-2 py-3 rounded-xl font-bold transition-all border ${mode === "multiplayer" ? "bg-sky-500 text-white border-sky-400 shadow-lg" : "bg-sky-950 text-sky-400 border-sky-800 hover:bg-sky-800"}`}
+                                    >
+                                        <GiCrossedSwords size={16} /> Multiplayer
+                                    </button>
+                                    <button
+                                        onClick={() => setMode("singleplayer")}
+                                        className={`flex items-center justify-center gap-2 py-3 rounded-xl font-bold transition-all border ${mode === "singleplayer" ? "bg-sky-500 text-white border-sky-400 shadow-lg" : "bg-sky-950 text-sky-400 border-sky-800 hover:bg-sky-800"}`}
+                                    >
+                                        <FaUserAstronaut size={16} /> Singleplayer
+                                    </button>
+                                </div>
                             </div>
 
                             <div>
                                 <label className="text-sky-200 text-sm font-bold ml-1 mb-2 block">Platform:</label>
-                                <select
-                                    value={platform}
-                                    onChange={(e) => setPlatform(e.target.value)}
-                                    className="w-full px-4 py-3 bg-sky-950 text-white rounded-xl outline-none focus:ring-2 focus:ring-sky-400 border border-sky-800 font-medium appearance-none cursor-pointer"
-                                >
-                                    <option value="">🎮 Any Platform</option>
-                                    <option value="4">💻 PC</option>
-                                    <option value="18">🟦 PlayStation 4/5</option>
-                                    <option value="1">🟩 Xbox</option>
-                                </select>
+                                <div className="grid grid-cols-2 gap-2">
+                                    <button
+                                        onClick={() => setPlatform("")}
+                                        className={`flex items-center justify-center gap-2 py-3 rounded-xl font-bold transition-all border ${platform === "" ? "bg-sky-500 text-white border-sky-400 shadow-lg" : "bg-sky-950 text-sky-400 border-sky-800 hover:bg-sky-800"}`}
+                                    >
+                                        <FaGlobe size={16} /> Any
+                                    </button>
+                                    <button
+                                        onClick={() => setPlatform("4")}
+                                        className={`flex items-center justify-center gap-2 py-3 rounded-xl font-bold transition-all border ${platform === "4" ? "bg-sky-500 text-white border-sky-400 shadow-lg" : "bg-sky-950 text-sky-400 border-sky-800 hover:bg-sky-800"}`}
+                                    >
+                                        <FaWindows size={16} /> PC
+                                    </button>
+                                    <button
+                                        onClick={() => setPlatform("18")}
+                                        className={`flex items-center justify-center gap-2 py-3 rounded-xl font-bold transition-all border ${platform === "18" ? "bg-sky-500 text-white border-sky-400 shadow-lg" : "bg-sky-950 text-sky-400 border-sky-800 hover:bg-sky-800"}`}
+                                    >
+                                        <FaPlaystation size={16} /> PS 4/5
+                                    </button>
+                                    <button
+                                        onClick={() => setPlatform("1")}
+                                        className={`flex items-center justify-center gap-2 py-3 rounded-xl font-bold transition-all border ${platform === "1" ? "bg-sky-500 text-white border-sky-400 shadow-lg" : "bg-sky-950 text-sky-400 border-sky-800 hover:bg-sky-800"}`}
+                                    >
+                                        <FaXbox size={16} /> Xbox
+                                    </button>
+                                </div>
                             </div>
 
                             <button
