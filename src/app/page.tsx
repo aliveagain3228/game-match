@@ -6,6 +6,7 @@ import { checkGameCount } from "@/services/rawg.service";
 import { FaWindows, FaPlaystation, FaXbox, FaUserFriends, FaGlobe, FaGamepad, FaUser} from "react-icons/fa";
 import { FaUserAstronaut} from "react-icons/fa6";
 import { GiCrossedSwords } from "react-icons/gi";
+import { Gamepad2, Clapperboard, Popcorn, Book, Settings } from "lucide-react";
 
 
 export default function Home() {
@@ -69,16 +70,16 @@ export default function Home() {
 
                 <div className="flex items-center gap-1 sm:gap-2 overflow-x-auto no-scrollbar max-w-[50%] sm:max-w-none">
                     <button className="px-3 sm:px-4 py-1.5 sm:py-2 bg-sky-500 text-sky-950 rounded-full font-extrabold text-xs sm:text-sm shadow-lg flex items-center gap-1.5 cursor-default shrink-0">
-                        🎮 Games
+                        <Gamepad2 size={16} strokeWidth={2.5} /> Games
                     </button>
                     <button disabled className="px-3 sm:px-4 py-1.5 sm:py-2 bg-sky-900/50 text-sky-400/60 rounded-full font-bold text-xs sm:text-sm border border-sky-800/50 cursor-not-allowed flex items-center gap-1.5 shrink-0">
-                        🎬 Movies <span className="hidden sm:inline-block text-[10px] bg-sky-950 px-1.5 py-0.5 rounded text-sky-500">Soon</span>
+                         <Clapperboard size={16} /> <span className="hidden sm:inline-block text-[10px] bg-sky-950 px-1.5 py-0.5 rounded text-sky-500">Soon</span>
                     </button>
                     <button disabled className="px-3 sm:px-4 py-1.5 sm:py-2 bg-sky-900/50 text-sky-400/60 rounded-full font-bold text-xs sm:text-sm border border-sky-800/50 cursor-not-allowed flex items-center gap-1.5 shrink-0">
-                        🍿 Cartoons <span className="hidden sm:inline-block text-[10px] bg-sky-950 px-1.5 py-0.5 rounded text-sky-500">Soon</span>
+                        <Popcorn size={16} /> Cartoons <span className="hidden sm:inline-block text-[10px] bg-sky-950 px-1.5 py-0.5 rounded text-sky-500">Soon</span>
                     </button>
                     <button disabled className="px-3 sm:px-4 py-1.5 sm:py-2 bg-sky-900/50 text-sky-400/60 rounded-full font-bold text-xs sm:text-sm border border-sky-800/50 cursor-not-allowed flex items-center gap-1.5 shrink-0">
-                        📚 Books <span className="hidden sm:inline-block text-[10px] bg-sky-950 px-1.5 py-0.5 rounded text-sky-500">Soon</span>
+                        <Book size={16} /> Books <span className="hidden sm:inline-block text-[10px] bg-sky-950 px-1.5 py-0.5 rounded text-sky-500">Soon</span>
                     </button>
                 </div>
 
@@ -101,7 +102,7 @@ export default function Home() {
                     className="w-full flex items-center justify-between px-5 py-3 mb-2 bg-sky-950 text-sky-200 rounded-xl border border-sky-800 hover:bg-sky-800 transition-colors"
                 >
                     <span className="font-bold">Filters & Settings</span>
-                    <span>⚙️</span>
+                    <Settings size={18} className="text-sky-400 group-hover:rotate-90 transition-transform duration-300" />
                 </button>
 
 
