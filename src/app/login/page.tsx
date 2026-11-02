@@ -3,6 +3,7 @@
 import { useState, FormEvent } from 'react'
 import { signIn } from 'next-auth/react'
 import { useRouter } from 'next/navigation'
+import { FcGoogle } from "react-icons/fc";
 
 export default function LoginPage() {
     const [form, setForm] = useState({ email: '', password: '' })
@@ -50,6 +51,25 @@ export default function LoginPage() {
                 <button type="submit" className="p-3 bg-blue-600 text-white font-semibold rounded hover:bg-blue-700 transition-colors cursor-pointer">
                     Sign in
                 </button>
+
+                <div className="flex items-center gap-4 my-6">
+                    <div className="flex-1 h-px bg-sky-800">
+                        <span className="text-sky-400 font-medium text-sm">
+                            Or sign in with
+                        </span>
+                        <div className="flex-1 h-px bg-sky-800"></div>
+                    </div>
+
+                    <button
+                        type="button"
+                        onClick={() => signIn('google', { callbackUrl: '/' })}
+                        className="w-full flex items-center justify-center gap-3 py-3 bg-white text-gray-800 rounded-xl font-bold text-lg hover:bg-gray-100 transition-colors shadow-md"
+                    >
+                        <FcGoogle size={24} />
+                        Google
+                    </button>
+                </div>
+
             </form>
 
             {error && <p className="mt-4 text-red-500 font-medium">{error}</p>}
