@@ -6,10 +6,11 @@ import GameCard from "./GameCard";
 import { AnimatePresence } from "framer-motion";
 import { socket } from "@/sockets";
 import { useRouter } from "next/navigation";
+import { useSession } from "next-auth/react";
 
 
 export default function SwipeContainer() {
-    const {games, addGames, swipeRight, likedGames, swipeLeft, undoSwipe, matchedGames} = useGameStore();
+    const {games, addGames, swipeRight, likedGames, swipeLeft, undoSwipe, matchedGames, setMatchedGame} = useGameStore();
     const [error, setError] = useState<string | null>(null);
     const [page, setPage] = useState(1);
     const [isLoading, setIsLoading] = useState(true);
@@ -20,6 +21,9 @@ export default function SwipeContainer() {
     const [isHistoryOpen, setIsHistoryOpen] = useState(false);
     const roomIdRef = useRef<string | null>(null);
     const [activeFilter, setActiveFilter] = useState("")
+    const { data: session } = useSession();
+    const userId = session?.user?.email || "Anonymous"
+
 
     const router = useRouter();
 
@@ -36,7 +40,7 @@ export default function SwipeContainer() {
         roomIdRef.current = currentRoom;
         socket.connect()
 
-        socket.emit('join_room', { roomId: currentRoom, filter: currentFilter });
+        socket.emit('join_room', { roomId: currentRoom, filter: currentFilter, userId });
 
         socket.on('match', (data) => {
             console.log("Server provided match game ID:", data.gameId)
@@ -45,6 +49,15 @@ export default function SwipeContainer() {
             const gameToSave = useGameStore.getState().likedGames.find(g => g.id === data.gameId)
             if (gameToSave) {
                 useGameStore.getState().addMatchedGame(gameToSave)
+                fetch('/api/matches', {
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify({
+                        gameId: gameToSave.id,
+                        gameName: gameToSave.name,
+                        gameImage: gameToSave.background_image
+                    })
+                }).catch(err => console.error("Failed to save match to DB", err))
             }
         })
 
@@ -61,6 +74,23 @@ export default function SwipeContainer() {
             socket.disconnect()
         }
     }, [])
+
+    useEffect(() => {
+        if (userId !== "Anonymous") {
+            fetch('/api/matches')
+                .then(res => res.json())
+                .then(data => {
+                    const formatedMatches = data.map((m: { gameId: number, gameName: string, gameImage: string }) => ({
+                        id: m.gameId,
+                        name: m.gameName,
+                        background_image: m.gameImage
+                    }))
+                    setMatchedGame(formatedMatches)
+                })
+                .catch(err => console.error("Failed to load history", err))
+        }
+    }, [userId, setMatchedGame])
+
 
     useEffect(() => {
         async function loadGames() {
@@ -92,7 +122,7 @@ export default function SwipeContainer() {
     const handleLike = () => {
         const room = roomIdRef.current
         if (room && games.length > 0) {
-            socket.emit('swipe', { roomId: room, gameId: games[0].id, action: 'LIKE' });
+            socket.emit('swipe', { roomId: room, gameId: games[0].id, action: 'LIKE', userId });
         }
         swipeRight()
     }
@@ -100,7 +130,7 @@ export default function SwipeContainer() {
     const handleDislike = () => {
         const room = roomIdRef.current
         if (room && games.length > 0) {
-            socket.emit('swipe', { roomId: room, gameId: games[0].id, action: 'DISLIKE' });
+            socket.emit('swipe', { roomId: room, gameId: games[0].id, action: 'DISLIKE', userId });
         }
         swipeLeft()
     }

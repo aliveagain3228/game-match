@@ -15,4 +15,16 @@ model User {
   password  String
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
+  matches   Match[]
+}
+
+model Match {
+  id        String   @id @default(cuid())
+  userId    String
+  gameId    Int
+  gameName  String
+  gameImage String?
+  createdAt DateTime @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
 }
