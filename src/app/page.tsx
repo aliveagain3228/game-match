@@ -7,11 +7,13 @@ import { FaWindows, FaPlaystation, FaXbox, FaUserFriends, FaGlobe, FaGamepad, Fa
 import { FaUserAstronaut} from "react-icons/fa6";
 import { GiCrossedSwords } from "react-icons/gi";
 import { Gamepad2, Clapperboard, Popcorn, Book, Settings } from "lucide-react";
+import { useSession, signOut } from "next-auth/react";
 
 
 export default function Home() {
 
     const router = useRouter()
+    const { data: session, status } = useSession()
     const [joinCode, setJoinCode] = useState('')
     const [isModalOpen, setIsModalOpen] = useState(false)
     const [mode, setMode] = useState("")
@@ -84,9 +86,28 @@ export default function Home() {
                 </div>
 
                 <div className="flex items-center gap-3">
-                    <button className="w-9 h-9 rounded-full bg-sky-900 border border-sky-700 flex items-center justify-center hover:bg-sky-700 hover:text-white text-sky-400 transition-colors shadow-sm">
-                        <FaUser size={14} />
-                    </button>
+                    {status === "authenticated" ? (
+                        <div className="flex items-center gap-3">
+                            <span className="text-sm font-bold text-sky-200 hidden sm:block">
+                                {session?.user?.name || session?.user?.email}
+                            </span>
+                            <button
+                                onClick={() => signOut()}
+                                className="px-3 py-1.5 bg-red-500/20 text-red-400 border border-red-500/50 rounded-lg text-xs font-bold hover:bg-red-500 hover:text-white transition-colors"
+                            >
+                                Sign Out
+                            </button>
+                        </div>
+                    ) : (
+                        <button
+                            onClick={() => router.push('/login')}
+                            className="w-9 h-9 rounded-full bg-sky-900 border border-sky-700 flex items-center justify-center hover:bg-sky-700 hover:text-white text-sky-400 transition-colors shadow-sm"
+                        >
+                            <FaUser size={14} />
+                        </button>
+                    )}
+
+
                 </div>
             </header>
 
