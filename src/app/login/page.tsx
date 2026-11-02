@@ -1,78 +1,94 @@
 'use client'
 
-import { useState, FormEvent } from 'react'
+import { useState } from 'react'
 import { signIn } from 'next-auth/react'
 import { useRouter } from 'next/navigation'
 import { FcGoogle } from "react-icons/fc";
 
 export default function LoginPage() {
-    const [form, setForm] = useState({ email: '', password: '' })
-    const [error, setError] = useState('')
     const router = useRouter()
+    const [email, setEmail] = useState('')
+    const [password, setPassword] = useState('')
 
-    const handleSubmit = async (e: FormEvent<HTMLFormElement>) => {
+
+    const handleSubmit = async (e: React.FormEvent) =>
+    {
         e.preventDefault()
-        setError('')
-
-        const res = await signIn('credentials', {
-            email: form.email,
-            password: form.password,
-            redirect: false,
-        })
-
-        if (res?.error) {
-            setError(res.error)
-        } else {
-            router.push('/')
-            router.refresh()
-        }
+        await signIn('credentials', {email, password, callbackUrl: '/'})
     }
 
     return (
-        <div className="max-w-md mx-auto mt-12 font-sans px-4">
-            <h1 className="text-2xl font-bold mb-6 text-gray-800">Log in</h1>
-            <form onSubmit={handleSubmit} className="flex flex-col gap-4">
-                <input type="email"
-                       placeholder="Email"
-                       value={form.email}
-                       onChange={e => setForm({ ...form, email: e.target.value })}
-                       required
-                       className="p-3 border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-blue-500"
-                />
+        <div className="flex items-center justify-center min-h-screen bg-sky-50 p-4 relative overflow-hidden">
+            <button
+                onClick={() => router.push('/')}
+                className="absolute top-4 left-4 sm:top-6 sm:left-6 flex items-center gap-2 text-sky-900 font-bold bg-white px-4 py-2 rounded-xl shadow-md border border-sky-200 hover:bg-sky-100 transition-all z-10"
+            >
+                ⬅ Back to Lobby
+            </button>
 
-                <input type="password"
-                       placeholder="Password"
-                       value={form.password}
-                       onChange={e => setForm({ ...form, password: e.target.value })}
-                       required
-                       className="p-3 border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-blue-500"
-                />
+            <div className="absolute top-[-10%] left-[-10%] w-96 h-96 bg-sky-200 rounded-full mix-blend-multiply filter blur-3xl opacity-50 animate-blob"></div>
+            <div className="absolute bottom-[-10%] right-[-10%] w-96 h-96 bg-sky-300 rounded-full mix-blend-multiply filter blur-3xl opacity-50 animate-blob animation-delay-2000"></div>
 
-                <button type="submit" className="p-3 bg-blue-600 text-white font-semibold rounded hover:bg-blue-700 transition-colors cursor-pointer">
-                    Sign in
-                </button>
+            <div className="bg-white/90 backdrop-blur-xl p-8 sm:p-10 rounded-3xl shadow-2xl border border-white w-full max-w-md z-10">
+                <h1 className="text-4xl font-black text-sky-900 mb-2 text-center">Welcome Back</h1>
+                <p className="text-sky-500 text-center mb-8 font-medium">Log in to GameMatch</p>
 
-                <div className="flex items-center gap-4 my-6">
-                    <div className="flex-1 h-px bg-sky-800">
-                        <span className="text-sky-400 font-medium text-sm">
-                            Or sign in with
-                        </span>
-                        <div className="flex-1 h-px bg-sky-800"></div>
-                    </div>
+                <form
+                    onSubmit={handleSubmit}
+                    className="flex flex-col gap-4"
+                >
+                    <input
+                        type="email"
+                        placeholder="Email"
+                        value={email}
+                        onChange={e => setEmail(e.target.value)}
+                        className="w-full bg-sky-50 border border-sky-200 text-sky-900 rounded-xl px-5 py-3.5 focus:outline-none focus:ring-2 focus:ring-sky-400 placeholder:text-sky-400 font-medium transition-all"
+                        required
+                    />
+                    <input
+                        type="password"
+                        placeholder="Password"
+                        value={password}
+                        onChange={e => setPassword(e.target.value)}
+                        className="w-full bg-sky-50 border border-sky-200 text-sky-900 rounded-xl px-5 py-3.5 focus:outline-none focus:ring-2 focus:ring-sky-400 placeholder:text-sky-400 font-medium transition-all"
+                        required
+                    />
 
                     <button
-                        type="button"
-                        onClick={() => signIn('google', { callbackUrl: '/' })}
-                        className="w-full flex items-center justify-center gap-3 py-3 bg-white text-gray-800 rounded-xl font-bold text-lg hover:bg-gray-100 transition-colors shadow-md"
+                        type="submit"
+                        className="w-full bg-sky-500 text-white font-bold rounded-xl px-4 py-4 mt-2 hover:bg-sky-400 hover:scale-[1.02] transition-all shadow-lg text-lg"
                     >
-                        <FcGoogle size={24} />
-                        Google
+                        Sign In
                     </button>
+                </form>
+
+                <div className="flex items-center gap-4 my-8">
+                    <div className="flex-1 h-px bg-sky-200"></div>
+                    <span className="text-sky-400 font-semibold text-sm whitespace-nowrap">
+                        Or sign in with
+                    </span>
+                    <div className="flex-1 h-px bg-sky-200"></div>
                 </div>
 
-            </form>
+                <button
+                    type="button"
+                    onClick={() => signIn('google', { callbackUrl: '/' })}
+                    className="w-full flex items-center justify-center gap-3 py-3.5 bg-white text-sky-900 border-2 border-sky-100 rounded-xl font-bold text-lg hover:bg-sky-50 hover:border-sky-200 transition-all shadow-sm group"
+                >
+                    <FcGoogle size={26} className="group-hover:scale-110 transition-transform" />
+                    Google
+                </button>
 
-            {error && <p className="mt-4 text-red-500 font-medium">{error}</p>}
+                <div className="mt-8 text-center">
+                    <span className="text-sky-500 font-medium">Don&apos;t have an account? </span>
+                    <button
+                        onClick={() => router.push('/register')}
+                        className="text-sky-700 font-bold hover:underline"
+                    >
+                        Sign up
+                    </button>
+                </div>
+            </div>
         </div>
     )
 }

@@ -1,6 +1,6 @@
 import {GameTypes} from "@/services/rawg.service"
 import {create} from "zustand";
-import { persist } from "zustand/middleware/persist";
+import { persist } from "zustand/middleware";
 
 interface GameState {
     games: GameTypes[],
