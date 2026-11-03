@@ -8,6 +8,7 @@ import { FaUserAstronaut} from "react-icons/fa6";
 import { GiCrossedSwords } from "react-icons/gi";
 import { Gamepad2, Clapperboard, Popcorn, Book, Settings } from "lucide-react";
 import { useSession, signOut } from "next-auth/react";
+import FriendsMenu from "../components/FriendsMenu";
 
 
 export default function Home() {
@@ -46,7 +47,8 @@ export default function Home() {
             router.push(url)
         } catch (err) {
             setIsChecking(false)
-            alert("An error occurred while searching for games. Please try again.")
+            console.error("RAWG API Error:", err)
+            alert(`Error: ${err.message || 'Check console (F12)'}`)
         }
     }
 
@@ -88,6 +90,17 @@ export default function Home() {
                 <div className="flex items-center gap-3">
                     {status === "authenticated" ? (
                         <div className="flex items-center gap-3">
+                            {session?.user?.image ? (
+                                <img
+                                    src={session.user.image}
+                                    alt="Avatar"
+                                    className="w-8 h-8 rounded-full border border-sky-700 shadow-sm"
+                                />
+                            ) : (
+                                <div className="w-8 h-8 rounded-full bg-sky-800 border border-sky-700 flex items-center justify-center shadow-sm">
+                                <FaUser size={14} className="text-sky-300" />
+                                </div>
+                                )}
                             <span className="text-sm font-bold text-sky-200 hidden sm:block">
                                 {session?.user?.name || session?.user?.email}
                             </span>
@@ -126,7 +139,7 @@ export default function Home() {
                     <Settings size={18} className="text-sky-400 group-hover:rotate-90 transition-transform duration-300" />
                 </button>
 
-
+                <FriendsMenu />
 
                 <button
                     onClick={handleCreateRoom}
