@@ -1,7 +1,7 @@
 'use client'
 
-import { useState, useEffect } from 'react'
-import { Users, X, Check, Copy } from "lucide-react"
+import { useState, useEffect, useCallback } from 'react'
+import { Users, X, Check, Copy, User, UserCheck, UserX } from "lucide-react"
 
 export default function FriendsMenu() {
     const [isOpen, setIsOpen] = useState(false)
@@ -13,20 +13,32 @@ export default function FriendsMenu() {
     const [requestMessage, setRequestMessage] = useState('')
     const [isError, setIsError] = useState(false)
 
+    const [receivedRequests, setReceivedRequests] = useState<any[]>([])
+    const [sentRequests, setSentRequests] = useState<any[]>([])
+
+    const loadFriendsData = useCallback(() => {
+        fetch('/api/friends')
+            .then(async (res) => {
+                if (!res.ok) throw new Error(res.status === 401 ? "Not logged in" : "Server error")
+                return res.json()
+            })
+            .then(data => {
+                setMyId(data.myId)
+                setReceivedRequests(data.received || [])
+                setSentRequests(data.sent || [])
+            })
+            .catch(err => {
+                console.error("Failed to load friends data:", err)
+                setMyId("Log in to see ID")
+            })
+    }, [])
+
+
     useEffect(() => {
-        if (isOpen && !myId) {
-            fetch('/api/friends')
-                .then(async (res) => {
-                    if (!res.ok) throw new Error(res.status === 401 ? "Not logged in" : "Server error")
-                    return res.json()
-                })
-                .then(data => setMyId(data.myId))
-                .catch(err => {
-                    console.error("Failed to load friends data:", err)
-                    setMyId("Log in to see ID")
-                })
+        if (isOpen) {
+            loadFriendsData()
         }
-    }, [isOpen, myId])
+    }, [isOpen, loadFriendsData])
 
     const handleCopyId = () => {
         if (myId && myId !== "Log in to see ID") {
@@ -53,6 +65,7 @@ export default function FriendsMenu() {
             if (res.ok) {
                 setRequestMessage('Request sent successfully!')
                 setFriendIdInput('')
+                loadFriendsData()
             } else {
                 const errorText = await res.text()
                 setRequestMessage(errorText || 'Failed to send request')
@@ -67,6 +80,28 @@ export default function FriendsMenu() {
         }
     }
 
+    const handleResponse = async (requestId: string, action: 'ACCEPT' | 'DECLINE')=> {
+        try {
+            const res = await fetch('/api/friends', {
+                method: 'PATCH',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ requestId, action })
+            })
+
+            if (res.ok) {
+                loadFriendsData()
+            }
+        } catch (err) {
+            console.error("Failed to respond to request", err)
+        }
+    }
+
+    const incomingPending = receivedRequests.filter(r => r.status === 'PENDING')
+
+    const acceptedFriends = [
+        ...receivedRequests.filter(r => r.status === 'ACCEPTED').map(r => r.sender),
+        ...sentRequests.filter(r => r.status === 'ACCEPTED').map(r => r.receiver),
+    ]
 
     return (
         <>
@@ -77,6 +112,7 @@ export default function FriendsMenu() {
             <Users size={20} />
             Friends
         </button>
+
             {isOpen && (
                 <div className="absolute inset-0 bg-sky-950/80 backdrop-blur-sm z-50 flex items-end sm:justify-end sm:items-start">
                     <div className="w-full sm:max-w-md bg-sky-900 border-l border-sky-800 h-[85vh] sm:h-full rounded-t-3xl sm:rounded-none sm:rounded-l-3xl shadow-2xl p-6 overflow-y-auto animate-in slide-in-from-bottom sm:slide-in-from-right duration-300">
@@ -135,6 +171,89 @@ export default function FriendsMenu() {
                                 )}
                             </div>
                         </div>
+
+                        {incomingPending.length > 0 && (
+                            <div className="bg-sky-950 p-4 rounded-xl border border-sky-800 mb-6">
+                                <p className="text-sky-400 font-semibold mb-3 text-sm uppercase">
+                                    Friend Requests ({incomingPending.length})
+                                </p>
+                                <div className="flex flex-col gap-3">
+                                    {incomingPending.map((req) => (
+                                        <div key={req.id} className="flex items-center justify-between bg-sky-900 p-3 rounded-lg border border-sky-800">
+                                            <div className="flex items-center gap-3">
+                                                {req.sender.image ? (
+                                                    <img src={req.sender.image} alt={req.sender.name} className="w-8 h-8 rounded-full border border-sky-700 object-cover" />
+                                                ) : (
+                                                    <div className="w-8 h-8 rounded-full bg-sky-800 border border-sky-700 flex items-center justify-center">
+                                                        <User size={14} className="text-sky-300" />
+                                                    </div>
+                                                )}
+                                                <span className="font-bold text-white text-sm">
+                                                    {req.sender.name || req.sender.email}
+                                                </span>
+                                            </div>
+                                            <div className="flex gap-2">
+                                                <button
+                                                onClick={() => handleResponse(req.id, 'ACCEPT')}
+                                                className="p-2 bg-emerald-600/30 text-emerald-400 border border-emerald-500/50 rounded-lg hover:bg-emerald-500 hover:text-white transition-all"
+                                                title="Accept"
+                                                >
+                                                    <UserCheck size={16} />
+                                                </button>
+                                                <button
+                                                    onClick={() => handleResponse(req.id, 'DECLINE')}
+                                                    className="p-2 bg-rose-600/30 text-rose-400 border border-rose-500/50 rounded-lg hover:bg-rose-500 hover:text-white transition-all"
+                                                    title="Decline"
+                                                >
+                                                    <UserX size={16} />
+                                                </button>
+                                            </div>
+                                        </div>
+                                    ))}
+                                </div>
+                            </div>
+                        )}
+
+                        <div className="bg-sky-950 p-4 rounded-xl border border-sky-800">
+                            <p className="text-sky-500 font-semibold mb-3 text-sm uppercase">
+                                My Friends ({acceptedFriends.length})
+                            </p>
+                            {acceptedFriends.length === 0 ? (
+                                <p className="text-center text-sky-500/70 text-sm py-4 font-medium">
+                                    No friends added yet
+                                </p>
+                            ) : (
+                                <div className="flex flex-col gap-2">
+                                    {acceptedFriends.map((friend) => (
+                                        <div key={friend.id} className="flex items-center gap-3 bg-sky-900 p-3 rounded-lg border border-sky-800 hover:bg-sky-800/80 cursor-pointer transition-all">
+                                            {friend.image ? (
+                                                <img
+                                                    src={friend.image}
+                                                    alt={friend.name}
+                                                    className="w-10 h-10 rounded-full border border-sky-700 object-cover"
+                                                />
+                                            ) : (
+                                                <div className="w-10 h-10 rounded-full bg-sky-800 border border-sky-700 flex items-center justify-center">
+                                                    <User size={16} className="text-sky-300" />
+                                                </div>
+                                            )}
+
+                                            <div className="flex flex-col">
+                                                <span className="font-bold text-white text-sm">
+                                                    {friend.name || friend.email}
+                                                </span>
+                                                <div className="flex items-center gap-1.5 mt-0.5">
+                                                    <div className="w-2 h-2 rounded-full bg-emerald-500 shadow-[0_0_8px_rgba(16,185,129,0.6)]"></div>
+                                                    <span className="text-emerald-400 text-xs font-semibold">Online</span>
+                                                </div>
+                                            </div>
+
+                                        </div>
+                                    ))}
+                                </div>
+                            )}
+                        </div>
+
                     </div>
                 </div>
             )}
