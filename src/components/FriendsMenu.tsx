@@ -8,6 +8,11 @@ export default function FriendsMenu() {
     const [myId, setMyId] = useState<string | null>(null)
     const [isCopied, setIsCopied] = useState(false)
 
+    const [friendIdInput, setFriendIdInput] = useState('')
+    const [isSending, setIsSending] = useState(false)
+    const [requestMessage, setRequestMessage] = useState('')
+    const [isError, setIsError] = useState(false)
+
     useEffect(() => {
         if (isOpen && !myId) {
             fetch('/api/friends')
@@ -30,6 +35,38 @@ export default function FriendsMenu() {
             setTimeout(() => setIsCopied(false), 2000)
         }
     }
+
+    const handleAddFriend = async () => {
+        if (!friendIdInput.trim()) return
+
+        setIsSending(true)
+        setRequestMessage('')
+        setIsError(false)
+
+        try {
+            const res = await fetch('/api/friends', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ targetId: friendIdInput.trim() })
+            })
+
+            if (res.ok) {
+                setRequestMessage('Request sent successfully!')
+                setFriendIdInput('')
+            } else {
+                const errorText = await res.text()
+                setRequestMessage(errorText || 'Failed to send request')
+                setIsError(true)
+            }
+        } catch (err) {
+            setRequestMessage('Network Error')
+            setIsError(true)
+        } finally {
+            setIsSending(false)
+            setTimeout(() => setRequestMessage(''), 2000)
+        }
+    }
+
 
     return (
         <>
@@ -68,10 +105,36 @@ export default function FriendsMenu() {
                             </div>
                         </div>
 
-                        <div className="text-center text-sky-400 font-medium">
-                            Search and requests will be here...
+                        <div className="bg-sky-950 p-4 rounded-xl border border-sky-800 mb-8">
+                            <p className="text-sky-500 font-semibold mb-3 text-sm uppercase">
+                                Add Friend
+                            </p>
+                            <div className="flex flex-col gap-3">
+                                <input
+                                    type="text"
+                                    placeholder="Paste friend's id here..."
+                                    value={friendIdInput}
+                                    onChange={(e) => setFriendIdInput(e.target.value)}
+                                    className="w-full bg-sky-900 border border-sky-700 p-3 rounded-lg text-sky-200 font-mono text-sm focus:outline-none focus:ring-2 focus:ring-sky-500 placeholder-sky-600 transition-all"
+                                />
+                                <button
+                                    onClick={handleAddFriend}
+                                    disabled={isSending || !friendIdInput.trim()}
+                                    className={`w-full py-2.5 rounded-lg font-bold transition-all shadow-md flex items-center justify-center gap-2 ${
+                                        isSending || !friendIdInput.trim()
+                                            ? 'bg-sky-800/50 text-sky-600 cursor-not-allowed'
+                                            : 'bg-sky-500 text-white hover:bg-sky-400 active:scale-95'
+                                    }`}
+                                >
+                                    {isSending ? 'Sending...' : 'Send Request'}
+                                </button>
+                                {requestMessage && (
+                                    <p className={`text-center text-sm font-bold mt-1 ${isError ? 'text-rose-400' : 'text-emerald-400'}`}>
+                                        {requestMessage}
+                                    </p>
+                                )}
+                            </div>
                         </div>
-
                     </div>
                 </div>
             )}
