@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useCallback } from 'react'
 import { Users, X, Check, Copy, User, UserCheck, UserX } from "lucide-react"
+import { io } from "socket.io-client"
 
 export default function FriendsMenu() {
     const [isOpen, setIsOpen] = useState(false)
@@ -15,6 +16,21 @@ export default function FriendsMenu() {
 
     const [receivedRequests, setReceivedRequests] = useState<any[]>([])
     const [sentRequests, setSentRequests] = useState<any[]>([])
+
+    const [onlineIds, setOnlineIds] = useState<string[]>([])
+
+    useEffect(() => {
+        if (myId && myId !== "Log in to see ID") {
+            const socket = io('https://gamematch-backend-9y1r.onrender.com')
+            socket.emit('user_connected', myId)
+            socket.on('update_online_users', (users: string[]) => {
+                setOnlineIds(users)
+            })
+            return () => {
+                socket.disconnect()
+            }
+        }
+    }, [myId])
 
     const loadFriendsData = useCallback(() => {
         fetch('/api/friends')
@@ -38,6 +54,11 @@ export default function FriendsMenu() {
         if (isOpen) {
             loadFriendsData()
         }
+    }, [isOpen, loadFriendsData])
+
+    useEffect(() => {
+        if (isOpen) loadFriendsData()
+
     }, [isOpen, loadFriendsData])
 
     const handleCopyId = () => {
@@ -182,7 +203,12 @@ export default function FriendsMenu() {
                                         <div key={req.id} className="flex items-center justify-between bg-sky-900 p-3 rounded-lg border border-sky-800">
                                             <div className="flex items-center gap-3">
                                                 {req.sender.image ? (
-                                                    <img src={req.sender.image} alt={req.sender.name} className="w-8 h-8 rounded-full border border-sky-700 object-cover" />
+                                                    <img
+                                                        src={req.sender.image}
+                                                        alt={req.sender.name}
+                                                        className="w-8 h-8 rounded-full border border-sky-700 object-cover"
+                                                        referrerPolicy="no-referrer"
+                                                    />
                                                 ) : (
                                                     <div className="w-8 h-8 rounded-full bg-sky-800 border border-sky-700 flex items-center justify-center">
                                                         <User size={14} className="text-sky-300" />
@@ -231,6 +257,7 @@ export default function FriendsMenu() {
                                                     src={friend.image}
                                                     alt={friend.name}
                                                     className="w-10 h-10 rounded-full border border-sky-700 object-cover"
+                                                    referrerPolicy="no-referrer"
                                                 />
                                             ) : (
                                                 <div className="w-10 h-10 rounded-full bg-sky-800 border border-sky-700 flex items-center justify-center">
@@ -243,8 +270,21 @@ export default function FriendsMenu() {
                                                     {friend.name || friend.email}
                                                 </span>
                                                 <div className="flex items-center gap-1.5 mt-0.5">
-                                                    <div className="w-2 h-2 rounded-full bg-emerald-500 shadow-[0_0_8px_rgba(16,185,129,0.6)]"></div>
-                                                    <span className="text-emerald-400 text-xs font-semibold">Online</span>
+                                                    <div
+                                                        className={`w-2 h-2 rounded-full ${
+                                                        onlineIds.includes(friend.id)
+                                                        ? 'bg-emerald-500 shadow-[0_0_8px_rgba(16,185,129,0.6)]'
+                                                        : 'bg-slate-500'
+                                                    }`}></div>
+                                                    <span
+                                                        className={`text-xs font-semibold ${
+                                                            onlineIds.includes(friend.id)
+                                                                ? 'text-emerald-400'
+                                                                : 'text-slate-400'
+                                                        }`}
+                                                    >
+                                                        {onlineIds.includes(friend.id) ? 'Online' : 'Offline'}
+                                                    </span>
                                                 </div>
                                             </div>
 
