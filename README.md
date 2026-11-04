@@ -23,10 +23,6 @@
 
 A full-stack real-time web application designed to help players discover games and find teammates. Built with a robust Next.js architecture, secure authentication, and real-time WebSocket connections. Users can filter games by platform or mode, generate matchmaking rooms, and connect with friends across the globe.
 
-### 📸 App Preview
-
-<img src="./public/preview.png" alt="GameMatch Interface" width="600"/>
-
 ## ✨ Features
 
 - 🔐 **Authentication** — seamless Google OAuth and manual Credentials login via NextAuth.
