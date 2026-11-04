@@ -3,7 +3,7 @@
 # 🎮 GameMatch
 
   <p>
-    <a href="[#](https://game-match-phi-kohl.vercel.app)" target="_blank">
+    <a href="(https://game-match-phi-kohl.vercel.app)" target="_blank">
       <img src="https://img.shields.io/badge/Live_Demo-Link-007ACC?style=for-the-badge&logo=vercel&logoColor=white" alt="Live Demo" />
     </a>
   </p>
