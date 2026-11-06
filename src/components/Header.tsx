@@ -4,13 +4,20 @@ import { useRouter } from 'next/navigation'
 import { useSession, signOut } from "next-auth/react"
 import { FaGamepad, FaUser } from "react-icons/fa"
 import { Gamepad2, Clapperboard, Popcorn, Book } from "lucide-react"
+import { motion } from "framer-motion"
+
 
 export default function Header() {
     const router = useRouter()
     const { data: session, status } = useSession()
 
     return (
-        <header className="fixed top-0 left-0 w-full h-16 bg-sky-950/80 backdrop-blur-md border-b border-sky-800 z-50 flex items-center justify-between px-4 sm:px-8">
+        <motion.header
+            initial={{ y: -100, opacity: 0 }}
+            animate={{ y: 0, opacity: 1 }}
+            transition={{ type: "spring", stiffness: 100, damping: 20 }}
+            className="fixed top-0 left-0 w-full h-16 bg-sky-950/80 backdrop-blur-md border-b border-sky-800 z-50 flex items-center justify-between px-4 sm:px-8"
+        >
             <div
                 onClick={() => router.push('/')}
                 className="flex items-center gap-3 font-black text-xl tracking-tight cursor-pointer hover:scale-105 transition-transform">
@@ -69,6 +76,8 @@ export default function Header() {
                     </button>
                 )}
             </div>
-        </header>
+        </motion.header>
+
+
     )
 }

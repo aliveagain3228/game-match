@@ -3,6 +3,8 @@
 import { useState, useEffect, useCallback } from 'react'
 import { Users, X, Check, Copy, User, UserCheck, UserX } from "lucide-react"
 import { io } from "socket.io-client"
+import { motion, AnimatePresence } from "framer-motion"
+
 
 export default function FriendsMenu() {
     const [isOpen, setIsOpen] = useState(false)
