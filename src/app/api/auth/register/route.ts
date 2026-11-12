@@ -1,57 +1,63 @@
-import { NextResponse } from "next/server";
+import { NextRequest, NextResponse } from "next/server"
+import { Prisma } from "@prisma/client"
+import bcrypt from "bcryptjs"
 import { prisma } from "@/lib/prisma"
-import bcrypt from 'bcryptjs'
-import { z } from "zod"
+import { registerSchema } from "@/lib/validations/auth";
 
-const registerSchema = z.object({
-    name: z.string().min(2, "The name is too short").max(32, "The name is too long"),
-    email: z.string().regex(/^[^\s@]+@[^\s@]+\.[^\s@]+$/,"Invalid email format"),
-    password: z.string().min(6, "The password must be at least 6 characters long"),
-})
-
-export async function POST(req: Request) {
+export async function POST(req: NextRequest) {
+    let body: unknown;
     try {
-        const body = await req.json()
-        const validation = registerSchema.safeParse(body)
+        body = await req.json()
+    } catch {
+        return NextResponse.json({ message: "Invalid JSON payload" }, { status: 400 })
 
-        if (!validation.success) {
-            const errorList = validation.error.issues.map((issue) => ({
-                field: issue.path[0],
-                message: issue.message,
-            }))
+    }
+    const validation = registerSchema.safeParse(body)
 
-            return NextResponse.json(
-                { message: "Validation error", errors: errorList },
-                { status: 400}
-            )
-        }
+    if (!validation.success) {
+        const errorList = validation.error.issues.map((issue) => ({
+            field: issue.path[0],
+            message: issue.message,
+        }))
 
-        const { name, email, password } = validation.data
+        return NextResponse.json(
+            {message: "Validation error", errors: errorList},
+            { status: 400 }
+        )
+    }
 
-        const existingUser = await prisma.user.findUnique({
-            where: { email },
-        })
-        if (existingUser) {
-            return NextResponse.json(
-                { message: "A user with that email address already exists"},
-                { status: 400}
-            )
-        }
+    const { name, email, password } = validation.data
 
-        const hashedPassword = await bcrypt.hash(password, 10)
+    try {
+        const hashedPassword = await bcrypt.hash(password, 12)
         const newUser = await prisma.user.create({
             data: {
                 name,
                 email,
                 password: hashedPassword,
+            },
+            select: {
+                id: true,
+                email: true,
+                name: true,
             }
         })
-
         return NextResponse.json(
-            { message: "The user has been successfully created", user: { id: newUser.id, email: newUser.email }},
+            {
+                message: "The user has been successfully created",
+                user: newUser,
+            },
             { status: 201 }
         )
-    } catch {
-        return NextResponse.json({ message: "Something went wrong" }, { status: 500})
+    } catch (err) {
+        if (
+            err instanceof Prisma.PrismaClientKnownRequestError &&
+            err.code == "P2002"
+        ) {
+            return NextResponse.json(
+                { message: "A user with that email address already exists" },
+                { status: 409 }
+            )
+        }
     }
 }
