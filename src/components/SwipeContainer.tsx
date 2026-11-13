@@ -13,7 +13,6 @@ export default function SwipeContainer() {
     const {games, addGames, swipeRight, likedGames, swipeLeft, undoSwipe, matchedGames, setMatchedGame} = useGameStore();
     const [error, setError] = useState<string | null>(null);
     const [page, setPage] = useState(1);
-    const [isLoading, setIsLoading] = useState(true);
     const [hasMore, setHasMore] = useState(true)
     const [matchedGameId, setMatchedGameId] = useState<number | null>(null);
     const [isCopied, setIsCopied] = useState(false);
@@ -21,10 +20,12 @@ export default function SwipeContainer() {
     const [isHistoryOpen, setIsHistoryOpen] = useState(false);
     const roomIdRef = useRef<string | null>(null);
     const [activeFilter, setActiveFilter] = useState("")
+
     const { data: session } = useSession();
-    const userId = session?.user?.email || "Anonymous"
+    const userId = session?.user?.id || "Anonymous"
 
 
+    const isFetchingRef = useRef(false)
     const router = useRouter();
 
     useEffect(() => {
@@ -38,7 +39,9 @@ export default function SwipeContainer() {
         }
 
         roomIdRef.current = currentRoom;
-        socket.connect()
+        if (!socket.connected) {
+            socket.connect()
+        }
 
         socket.emit('join_room', { roomId: currentRoom, filter: currentFilter, userId });
 
@@ -71,9 +74,8 @@ export default function SwipeContainer() {
         return () => {
             socket.off('room_setup')
             socket.off('match')
-            socket.disconnect()
         }
-    }, [])
+    }, [userId])
 
     useEffect(() => {
         if (userId !== "Anonymous") {
@@ -94,11 +96,9 @@ export default function SwipeContainer() {
 
     useEffect(() => {
         async function loadGames() {
-            if (!isSocketReady) return
-            if ( games.length > 3 || !hasMore ) return
+            if (!isSocketReady || games.length > 3 || !hasMore || isFetchingRef.current) return
 
-            setIsLoading(true);
-
+            isFetchingRef.current = true
             const pageToSearch = page
 
             try {
@@ -111,8 +111,9 @@ export default function SwipeContainer() {
                 setPage(pageToSearch + 1)
             } catch {
                 setError("The games could not be loaded. Please try again later.");
+                setHasMore(false)
             } finally {
-                setIsLoading(false);
+                isFetchingRef.current = false
             }
         }
 

@@ -3,8 +3,23 @@
 import { useState, useEffect, useCallback } from 'react'
 import { Users, X, Check, Copy, User, UserCheck, UserX } from "lucide-react"
 import { io } from "socket.io-client"
-import { motion, AnimatePresence } from "framer-motion"
+import Image from "next/image";
 
+interface UserProfile {
+    id: string
+    name: string | null
+    email: string
+    image: string | null
+}
+
+interface FriendRequest {
+    id: string
+    senderId: string
+    receiverId: string
+    status: 'PENDING' | 'ACCEPTED' | 'REJECTED'
+    sender: UserProfile
+    receiver: UserProfile
+}
 
 export default function FriendsMenu() {
     const [isOpen, setIsOpen] = useState(false)
@@ -16,8 +31,8 @@ export default function FriendsMenu() {
     const [requestMessage, setRequestMessage] = useState('')
     const [isError, setIsError] = useState(false)
 
-    const [receivedRequests, setReceivedRequests] = useState<any[]>([])
-    const [sentRequests, setSentRequests] = useState<any[]>([])
+    const [receivedRequests, setReceivedRequests] = useState<FriendRequest[]>([])
+    const [sentRequests, setSentRequests] = useState<FriendRequest[]>([])
 
     const [onlineIds, setOnlineIds] = useState<string[]>([])
 
@@ -51,21 +66,16 @@ export default function FriendsMenu() {
             })
     }, [])
 
-
-    useEffect(() => {
-        if (isOpen) {
-            loadFriendsData()
-        }
-    }, [isOpen, loadFriendsData])
-
     useEffect(() => {
         if (isOpen) loadFriendsData()
+        const interval = setInterval(loadFriendsData, 10000)
+        return () => clearInterval(interval)
 
     }, [isOpen, loadFriendsData])
 
     const handleCopyId = () => {
         if (myId && myId !== "Log in to see ID") {
-            navigator.clipboard.writeText(myId)
+            void navigator.clipboard.writeText(myId)
             setIsCopied(true)
             setTimeout(() => setIsCopied(false), 2000)
         }
@@ -94,7 +104,7 @@ export default function FriendsMenu() {
                 setRequestMessage(errorText || 'Failed to send request')
                 setIsError(true)
             }
-        } catch (err) {
+        } catch {
             setRequestMessage('Network Error')
             setIsError(true)
         } finally {
@@ -205,9 +215,11 @@ export default function FriendsMenu() {
                                         <div key={req.id} className="flex items-center justify-between bg-sky-900 p-3 rounded-lg border border-sky-800">
                                             <div className="flex items-center gap-3">
                                                 {req.sender.image ? (
-                                                    <img
+                                                    <Image
                                                         src={req.sender.image}
-                                                        alt={req.sender.name}
+                                                        alt={req.sender.name || 'Avatar'}
+                                                        width={32}
+                                                        height={32}
                                                         className="w-8 h-8 rounded-full border border-sky-700 object-cover"
                                                         referrerPolicy="no-referrer"
                                                     />
@@ -255,9 +267,11 @@ export default function FriendsMenu() {
                                     {acceptedFriends.map((friend) => (
                                         <div key={friend.id} className="flex items-center gap-3 bg-sky-900 p-3 rounded-lg border border-sky-800 hover:bg-sky-800/80 cursor-pointer transition-all">
                                             {friend.image ? (
-                                                <img
+                                                <Image
                                                     src={friend.image}
-                                                    alt={friend.name}
+                                                    alt={friend.name || 'Avatar'}
+                                                    width={40}
+                                                    height={40}
                                                     className="w-10 h-10 rounded-full border border-sky-700 object-cover"
                                                     referrerPolicy="no-referrer"
                                                 />

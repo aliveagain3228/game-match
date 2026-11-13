@@ -1,6 +1,7 @@
 import {GameTypes} from "@/services/rawg.service";
 import { motion, useMotionValue, useTransform } from "framer-motion";
 import { Heart, X, Undo2 } from "lucide-react";
+import Image from "next/image";
 
 interface GameCardProps {
     game: GameTypes
@@ -40,8 +41,8 @@ export default function GameCard({game, onLike, onDislike, onUndo}: GameCardProp
                     }}
                     className="relative h-[65vh] w-full rounded-3xl shadow-2xl overflow-hidden sm:max-w-md max-w-sm"
                 >
-                    {/* eslint-disable-next-line @next/next/no-img-element */}
-                    <img
+
+                    <Image
                         className="absolute inset-0 w-full h-full object-cover"
                         src={game.background_image}
                         alt=""

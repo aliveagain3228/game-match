@@ -5,6 +5,7 @@ import { useSession, signOut } from "next-auth/react"
 import { FaGamepad, FaUser } from "react-icons/fa"
 import { Gamepad2, Clapperboard, Popcorn, Book } from "lucide-react"
 import { motion } from "framer-motion"
+import Image from "next/image"
 
 
 export default function Header() {
@@ -46,7 +47,7 @@ export default function Header() {
                 {status === "authenticated" ? (
                     <div className="flex items-center gap-3">
                         {session?.user?.image ? (
-                            <img
+                            <Image
                                 src={session.user.image}
                                 alt="Avatar"
                                 referrerPolicy="no-referrer"
