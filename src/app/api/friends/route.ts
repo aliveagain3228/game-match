@@ -1,66 +1,45 @@
-import { NextResponse } from "next/server";
+import { NextResponse, NextRequest } from "next/server";
 import { getServerSession } from "next-auth/next";
-import { authOptions } from "@/app/api/auth/[...nextauth]/route";
+import { Prisma } from "@prisma/client";
+import { authOptions } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
+import {
+    sendFriendRequestSchema, respondFriendRequestSchema
+} from "@/lib/validations/friends";
 
-export async function POST(req: Request) {
-    try {
-        const session = await getServerSession(authOptions);
-        if (!session?.user?.email) return new NextResponse("Unauthorized", { status: 401 })
+const publicUserSelect = {
+    id: true,
+    name: true,
+    email: true,
+    image: true,
+} satisfies Prisma.UserSelect
 
-        const { targetId } = await req.json()
-
-        const sender = await prisma.user.findUnique({ where: { email: session.user.email } });
-        const receiver = await prisma.user.findUnique({ where: { id: targetId } });
-
-        if (!sender || !receiver) {
-            return new NextResponse("User not found", { status: 404 })
-        }
-
-        if (sender.id === receiver.id) {
-            return new NextResponse("You cannot add yourself", { status: 400})
-        }
-
-        const existingRequest = await prisma.friendship.findFirst({
-            where: {
-                OR : [
-                    { senderId: sender.id, receiverId: receiver.id },
-                    { senderId: receiver.id, receiverId: sender.id}
-                ]
-            }
-        })
-
-        if (existingRequest) {
-            return new NextResponse("Friend request already exists", { status: 400 })
-        }
-
-        const newFriendship = await prisma.friendship.create({
-            data: {
-                senderId: sender.id,
-                receiverId: receiver.id
-            }
-        })
-
-        return NextResponse.json(newFriendship)
-    } catch (error) {
-        console.error("Error adding friend", error)
-        return new NextResponse("Internal Error", { status: 500 })
-    }
-}
-
-export async function GET(req: Request) {
+export async function GET() {
     try {
         const session = await getServerSession(authOptions)
-        if (!session?.user?.email) return new NextResponse("Unauthorized", { status: 401 })
+        const currentUserId = session?.user?.id
+
+        if (!currentUserId) {
+            return NextResponse.json({ message: "Unauthorized"}, { status: 401 })
+        }
 
         const user = await prisma.user.findUnique({
-            where: { email: session.user.email },
-            include: {
-                receivedFriendRequests: { include: { sender: true }},
-                sentFriendRequests: { include: { receiver: true } }
-            }
+            where: {id: currentUserId },
+            select: {
+                id: true,
+                receivedFriendRequests: {
+                    include: {sender: {select: publicUserSelect} },
+                },
+                sentFriendRequests: {
+                    include: {receiver: {select: publicUserSelect} },
+                },
+            },
         })
-        if (!user) return new NextResponse("User not found", { status: 404 })
+
+        if (!user) {
+            return NextResponse.json("User not found", {status: 404})
+        }
+
         return NextResponse.json({
             myId: user.id,
             received: user.receivedFriendRequests,
@@ -68,32 +47,133 @@ export async function GET(req: Request) {
         })
     } catch (error) {
         console.error("Error fetching friends data", error)
-        return new NextResponse("Internal Error", { status: 500 })
+        return NextResponse.json({ message: "Internal Error"}, { status: 500 })
     }
 }
 
-export async function PATCH(req: Request) {
+export async function POST(req: NextRequest) {
+    try {
+        const session = await getServerSession(authOptions);
+        const senderId = session?.user?.id
+
+        if (!senderId) {
+            return NextResponse.json({ message: "Unauthorized"}, { status: 401 })
+        }
+
+        const body = await req.json().catch(() => null)
+        const parsed = sendFriendRequestSchema.safeParse(body)
+
+        if (!parsed.success) {
+            return NextResponse.json(
+                { message: "Invalid request data", errors: parsed.error.issues },
+                { status: 400 }
+            )
+        }
+
+        const { targetId } = parsed.data
+
+        if (senderId === targetId) {
+            return NextResponse.json(
+                { message: "You cannot add yourself" },
+                { status: 400 }
+            )
+        }
+
+        const [receiver, existingRequest] = await Promise.all([
+            prisma.user.findUnique({
+                where: { id: targetId },
+                select: { id: true },
+            }),
+            prisma.friendship.findFirst({
+                where: {
+                    OR: [
+                        { senderId, receiverId: targetId },
+                        { senderId: targetId, receiverId: senderId },
+                    ],
+                },
+            }),
+        ])
+
+        if (!receiver) {
+            return NextResponse.json({ message: "User not found" }, { status: 404 })
+        }
+
+        if (existingRequest) {
+            return NextResponse.json(
+                { message: "Friend request already exists" },
+                { status: 409 }
+            )
+        }
+
+        const newFriendship = await prisma.friendship.create({
+            data: {
+                senderId,
+                receiverId: targetId,
+            }
+        })
+
+        return NextResponse.json(newFriendship, { status: 201})
+    } catch (error) {
+        console.error("Error adding friend", error)
+        return NextResponse.json({ message: "Internal Error"}, { status: 500 })
+    }
+}
+
+export async function PATCH(req: NextRequest) {
     try {
         const session = await getServerSession(authOptions)
-        if (!session?.user?.email) return new NextResponse("Unauthorized", { status: 401 })
-        const { requestId, action } = await req.json()
+        const currentUserId = session?.user?.id
+
+        if (!currentUserId) {
+            return NextResponse.json({ message: "Unauthorized"}, { status: 401 })
+        }
+
+        const body = await req.json().catch(() => null)
+        const parsed = respondFriendRequestSchema.safeParse(body)
+
+        if (!parsed.success) {
+            return NextResponse.json(
+                { message: "Invalid action or request ID", errors: parsed.error.issues },
+                { status: 400 }
+            )
+        }
+
+        const { requestId, action } = parsed.data
 
         if (action === 'ACCEPT') {
             const updated = await prisma.friendship.update({
-                where: { id: requestId },
+                where: {
+                    id: requestId,
+                    receiverId: currentUserId,
+                    status: "PENDING",
+                },
                 data: { status: 'ACCEPTED'}
             })
             return NextResponse.json(updated)
-        } else if (action == 'DECLINE') {
-            await prisma.friendship.delete({
-                where: { id: requestId}
-            })
-            return NextResponse.json({ message: "Request declined" })
         }
 
-        return new NextResponse("Invalid action", { status: 400 })
+        await prisma.friendship.delete({
+            where: {
+                id: requestId,
+                receiverId: currentUserId,
+                status: "PENDING",
+            },
+        })
+
+        return NextResponse.json({ message: "Request declined" })
     } catch (error) {
+        if (
+            error instanceof Prisma.PrismaClientKnownRequestError && error.code === "P2025"
+        ) {
+            return NextResponse.json(
+                { message: "Pending friend request not found" },
+                { status: 404 }
+            )
+        }
         console.error("Error updating friend request", error)
-        return new NextResponse("Internal Error", { status: 500})
+        return NextResponse.json({ message: "Internal Error",}, { status: 500 })
     }
 }
+
+
+
