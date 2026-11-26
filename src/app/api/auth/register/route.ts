@@ -1,17 +1,18 @@
 import { NextRequest, NextResponse } from "next/server"
-import { Prisma } from "@prisma/client"
 import bcrypt from "bcryptjs"
-import { prisma } from "@/lib/prisma"
-import { registerSchema } from "@/lib/validations/auth";
+import prisma from "@/lib/prisma"
+import { isPrismaError} from "@/lib/prismaError";
+import { registerSchema } from "@/lib/validations/auth"
 
 export async function POST(req: NextRequest) {
-    let body: unknown;
+    let body: unknown
+
     try {
         body = await req.json()
     } catch {
         return NextResponse.json({ message: "Invalid JSON payload" }, { status: 400 })
-
     }
+
     const validation = registerSchema.safeParse(body)
 
     if (!validation.success) {
@@ -21,7 +22,7 @@ export async function POST(req: NextRequest) {
         }))
 
         return NextResponse.json(
-            {message: "Validation error", errors: errorList},
+            { message: "Validation error", errors: errorList },
             { status: 400 }
         )
     }
@@ -30,6 +31,7 @@ export async function POST(req: NextRequest) {
 
     try {
         const hashedPassword = await bcrypt.hash(password, 12)
+
         const newUser = await prisma.user.create({
             data: {
                 name,
@@ -40,8 +42,9 @@ export async function POST(req: NextRequest) {
                 id: true,
                 email: true,
                 name: true,
-            }
+            },
         })
+
         return NextResponse.json(
             {
                 message: "The user has been successfully created",
@@ -49,15 +52,15 @@ export async function POST(req: NextRequest) {
             },
             { status: 201 }
         )
-    } catch (err) {
-        if (
-            err instanceof Prisma.PrismaClientKnownRequestError &&
-            err.code == "P2002"
-        ) {
+    } catch (error) {
+        if (isPrismaError(error, "P2002")) {
             return NextResponse.json(
                 { message: "A user with that email address already exists" },
                 { status: 409 }
             )
         }
+
+        console.error("Error registering user", error)
+        return NextResponse.json({ message: "Internal Error" }, { status: 500 })
     }
 }
