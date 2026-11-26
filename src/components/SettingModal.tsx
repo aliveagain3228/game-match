@@ -12,11 +12,39 @@ interface SettingsModalProps {
     onClose: () => void
 }
 
+const MODES = [
+    { value: "", label: "Any", Icon: FaGlobe },
+    { value: "co-op", label: "Co-op", Icon: FaUserFriends },
+    { value: "multiplayer", label: "Multiplayer", Icon: GiCrossedSwords },
+    { value: "singleplayer", label: "Singleplayer", Icon: FaUserAstronaut },
+]
+
+const PLATFORMS = [
+    { value: "", label: "Any", Icon: FaGlobe },
+    { value: "4", label: "PC", Icon: FaWindows },
+    { value: "18,187", label: "PS 4/5", Icon: FaPlaystation },
+    { value: "1,186", label: "Xbox", Icon: FaXbox },
+]
+
+const optionClass = (active: boolean) =>
+    `flex items-center justify-center gap-2 py-3 rounded-xl font-bold transition-all border ${
+        active
+            ? "bg-sky-500 text-white border-sky-400 shadow-lg"
+            : "bg-sky-950 text-sky-400 border-sky-800 hover:bg-sky-800"
+    }`
+
 export default function SettingsModal({ mode, setMode, platform, setPlatform, onClose }: SettingsModalProps) {
     return (
-        <div className="absolute inset-0 bg-sky-950/90 z-50 flex items-center justify-center px-4 backdrop-blur-sm">
+        <div
+            role="dialog"
+            aria-modal="true"
+            aria-label="Settings"
+            className="fixed inset-0 bg-sky-950/90 z-50 flex items-center justify-center px-4 backdrop-blur-sm"
+        >
             <div className="bg-sky-900 w-full max-w-sm rounded-2xl border border-sky-700 shadow-2xl p-6 relative animate-in zoom-in-95 duration-200">
                 <button
+                    type="button"
+                    aria-label="Close"
                     onClick={onClose}
                     className="absolute top-4 right-4 text-sky-400 hover:text-white text-xl transition-colors"
                 >
@@ -27,38 +55,38 @@ export default function SettingsModal({ mode, setMode, platform, setPlatform, on
                     <div>
                         <label className="text-sky-200 text-sm font-bold ml-1 mb-2 block">Game Mode:</label>
                         <div className="grid grid-cols-2 gap-2">
-                            <button onClick={() => setMode("")} className={`flex items-center justify-center gap-2 py-3 rounded-xl font-bold transition-all border ${mode === "" ? "bg-sky-500 text-white border-sky-400 shadow-lg" : "bg-sky-950 text-sky-400 border-sky-800 hover:bg-sky-800"}`}>
-                                <FaGlobe size={16} /> Any
-                            </button>
-                            <button onClick={() => setMode("co-op")} className={`flex items-center justify-center gap-2 py-3 rounded-xl font-bold transition-all border ${mode === "co-op" ? "bg-sky-500 text-white border-sky-400 shadow-lg" : "bg-sky-950 text-sky-400 border-sky-800 hover:bg-sky-800"}`}>
-                                <FaUserFriends size={16} /> Co-op
-                            </button>
-                            <button onClick={() => setMode("multiplayer")} className={`flex items-center justify-center gap-2 py-3 rounded-xl font-bold transition-all border ${mode === "multiplayer" ? "bg-sky-500 text-white border-sky-400 shadow-lg" : "bg-sky-950 text-sky-400 border-sky-800 hover:bg-sky-800"}`}>
-                                <GiCrossedSwords size={16} /> Multiplayer
-                            </button>
-                            <button onClick={() => setMode("singleplayer")} className={`flex items-center justify-center gap-2 py-3 rounded-xl font-bold transition-all border ${mode === "singleplayer" ? "bg-sky-500 text-white border-sky-400 shadow-lg" : "bg-sky-950 text-sky-400 border-sky-800 hover:bg-sky-800"}`}>
-                                <FaUserAstronaut size={16} /> Singleplayer
-                            </button>
+                            {MODES.map(({ value, label, Icon }) => (
+                                <button
+                                    key={label}
+                                    type="button"
+                                    onClick={() => setMode(value)}
+                                    className={optionClass(mode === value)}
+                                >
+                                    <Icon size={16} /> {label}
+                                </button>
+                            ))}
                         </div>
                     </div>
                     <div>
                         <label className="text-sky-200 text-sm font-bold ml-1 mb-2 block">Platform:</label>
                         <div className="grid grid-cols-2 gap-2">
-                            <button onClick={() => setPlatform("")} className={`flex items-center justify-center gap-2 py-3 rounded-xl font-bold transition-all border ${platform === "" ? "bg-sky-500 text-white border-sky-400 shadow-lg" : "bg-sky-950 text-sky-400 border-sky-800 hover:bg-sky-800"}`}>
-                                <FaGlobe size={16} /> Any
-                            </button>
-                            <button onClick={() => setPlatform("4")} className={`flex items-center justify-center gap-2 py-3 rounded-xl font-bold transition-all border ${platform === "4" ? "bg-sky-500 text-white border-sky-400 shadow-lg" : "bg-sky-950 text-sky-400 border-sky-800 hover:bg-sky-800"}`}>
-                                <FaWindows size={16} /> PC
-                            </button>
-                            <button onClick={() => setPlatform("18")} className={`flex items-center justify-center gap-2 py-3 rounded-xl font-bold transition-all border ${platform === "18" ? "bg-sky-500 text-white border-sky-400 shadow-lg" : "bg-sky-950 text-sky-400 border-sky-800 hover:bg-sky-800"}`}>
-                                <FaPlaystation size={16} /> PS 4/5
-                            </button>
-                            <button onClick={() => setPlatform("1")} className={`flex items-center justify-center gap-2 py-3 rounded-xl font-bold transition-all border ${platform === "1" ? "bg-sky-500 text-white border-sky-400 shadow-lg" : "bg-sky-950 text-sky-400 border-sky-800 hover:bg-sky-800"}`}>
-                                <FaXbox size={16} /> Xbox
-                            </button>
+                            {PLATFORMS.map(({ value, label, Icon }) => (
+                                <button
+                                    key={label}
+                                    type="button"
+                                    onClick={() => setPlatform(value)}
+                                    className={optionClass(platform === value)}
+                                >
+                                    <Icon size={16} /> {label}
+                                </button>
+                            ))}
                         </div>
                     </div>
-                    <button onClick={onClose} className="w-full mt-4 py-4 bg-sky-500 text-white rounded-xl font-bold text-lg hover:bg-sky-400 transition-colors shadow-md">
+                    <button
+                        type="button"
+                        onClick={onClose}
+                        className="w-full mt-4 py-4 bg-sky-500 text-white rounded-xl font-bold text-lg hover:bg-sky-400 transition-colors shadow-md"
+                    >
                         Save & Close
                     </button>
                 </div>

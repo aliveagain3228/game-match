@@ -1,16 +1,17 @@
-import { NextResponse, NextRequest } from "next/server";
-import { getServerSession } from "next-auth/next";
-import { Prisma } from "@prisma/client";
-import { authOptions } from "@/lib/auth";
-import { prisma } from "@/lib/prisma";
+import { NextResponse, NextRequest } from "next/server"
+import { getServerSession } from "next-auth/next"
+import type { Prisma } from "@/generated/prisma/client"
+import { authOptions } from "@/lib/auth"
+import prisma from "@/lib/prisma"
+import { isPrismaError} from "@/lib/prismaError";
 import {
-    sendFriendRequestSchema, respondFriendRequestSchema
-} from "@/lib/validations/friends";
+    sendFriendRequestSchema,
+    respondFriendRequestSchema,
+} from "@/lib/validations/friends"
 
 const publicUserSelect = {
     id: true,
     name: true,
-    email: true,
     image: true,
 } satisfies Prisma.UserSelect
 
@@ -20,44 +21,44 @@ export async function GET() {
         const currentUserId = session?.user?.id
 
         if (!currentUserId) {
-            return NextResponse.json({ message: "Unauthorized"}, { status: 401 })
+            return NextResponse.json({ message: "Unauthorized" }, { status: 401 })
         }
 
         const user = await prisma.user.findUnique({
-            where: {id: currentUserId },
+            where: { id: currentUserId },
             select: {
                 id: true,
                 receivedFriendRequests: {
-                    include: {sender: {select: publicUserSelect} },
+                    include: { sender: { select: publicUserSelect } },
                 },
                 sentFriendRequests: {
-                    include: {receiver: {select: publicUserSelect} },
+                    include: { receiver: { select: publicUserSelect } },
                 },
             },
         })
 
         if (!user) {
-            return NextResponse.json("User not found", {status: 404})
+            return NextResponse.json({ message: "User not found" }, { status: 404 })
         }
 
         return NextResponse.json({
             myId: user.id,
             received: user.receivedFriendRequests,
-            sent: user.sentFriendRequests
+            sent: user.sentFriendRequests,
         })
     } catch (error) {
         console.error("Error fetching friends data", error)
-        return NextResponse.json({ message: "Internal Error"}, { status: 500 })
+        return NextResponse.json({ message: "Internal Error" }, { status: 500 })
     }
 }
 
 export async function POST(req: NextRequest) {
     try {
-        const session = await getServerSession(authOptions);
+        const session = await getServerSession(authOptions)
         const senderId = session?.user?.id
 
         if (!senderId) {
-            return NextResponse.json({ message: "Unauthorized"}, { status: 401 })
+            return NextResponse.json({ message: "Unauthorized" }, { status: 401 })
         }
 
         const body = await req.json().catch(() => null)
@@ -109,13 +110,20 @@ export async function POST(req: NextRequest) {
             data: {
                 senderId,
                 receiverId: targetId,
-            }
+            },
         })
 
-        return NextResponse.json(newFriendship, { status: 201})
+        return NextResponse.json(newFriendship, { status: 201 })
     } catch (error) {
+        if (isPrismaError(error, "P2002")) {
+            return NextResponse.json(
+                { message: "Friend request already exists" },
+                { status: 409 }
+            )
+        }
+
         console.error("Error adding friend", error)
-        return NextResponse.json({ message: "Internal Error"}, { status: 500 })
+        return NextResponse.json({ message: "Internal Error" }, { status: 500 })
     }
 }
 
@@ -125,7 +133,7 @@ export async function PATCH(req: NextRequest) {
         const currentUserId = session?.user?.id
 
         if (!currentUserId) {
-            return NextResponse.json({ message: "Unauthorized"}, { status: 401 })
+            return NextResponse.json({ message: "Unauthorized" }, { status: 401 })
         }
 
         const body = await req.json().catch(() => null)
@@ -140,15 +148,16 @@ export async function PATCH(req: NextRequest) {
 
         const { requestId, action } = parsed.data
 
-        if (action === 'ACCEPT') {
+        if (action === "ACCEPT") {
             const updated = await prisma.friendship.update({
                 where: {
                     id: requestId,
                     receiverId: currentUserId,
                     status: "PENDING",
                 },
-                data: { status: 'ACCEPTED'}
+                data: { status: "ACCEPTED" },
             })
+
             return NextResponse.json(updated)
         }
 
@@ -162,18 +171,14 @@ export async function PATCH(req: NextRequest) {
 
         return NextResponse.json({ message: "Request declined" })
     } catch (error) {
-        if (
-            error instanceof Prisma.PrismaClientKnownRequestError && error.code === "P2025"
-        ) {
+        if (isPrismaError(error, "P2025")) {
             return NextResponse.json(
                 { message: "Pending friend request not found" },
                 { status: 404 }
             )
         }
+
         console.error("Error updating friend request", error)
-        return NextResponse.json({ message: "Internal Error",}, { status: 500 })
+        return NextResponse.json({ message: "Internal Error" }, { status: 500 })
     }
 }
-
-
-

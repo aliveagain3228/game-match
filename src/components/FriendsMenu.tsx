@@ -1,14 +1,14 @@
 'use client'
 
-import { useState, useEffect, useCallback } from 'react'
-import { Users, X, Check, Copy, User, UserCheck, UserX } from "lucide-react"
-import { io } from "socket.io-client"
-import Image from "next/image";
+import { useCallback, useEffect, useMemo, useState } from "react"
+import { useSession } from "next-auth/react"
+import { Users, X, Check, Copy, UserCheck, UserX } from "lucide-react"
+import Avatar from "@/components/Avatar"
+import { socket } from "@/sockets"
 
 interface UserProfile {
     id: string
     name: string | null
-    email: string
     image: string | null
 }
 
@@ -21,9 +21,21 @@ interface FriendRequest {
     receiver: UserProfile
 }
 
+interface FriendsResponse {
+    myId: string
+    received: FriendRequest[]
+    sent: FriendRequest[]
+}
+
+const POLL_INTERVAL_MS = 10_000
+
 export default function FriendsMenu() {
+    const { status } = useSession()
+    const isAuthenticated = status === 'authenticated'
+
     const [isOpen, setIsOpen] = useState(false)
-    const [myId, setMyId] = useState<string | null>(null)
+    const [data, setData] = useState<FriendsResponse | null>(null)
+    const [onlineIds, setOnlineIds] = useState<string[]>([])
     const [isCopied, setIsCopied] = useState(false)
 
     const [friendIdInput, setFriendIdInput] = useState('')
@@ -31,58 +43,109 @@ export default function FriendsMenu() {
     const [requestMessage, setRequestMessage] = useState('')
     const [isError, setIsError] = useState(false)
 
-    const [receivedRequests, setReceivedRequests] = useState<FriendRequest[]>([])
-    const [sentRequests, setSentRequests] = useState<FriendRequest[]>([])
+    const loadFriends = useCallback(async () => {
+        try {
+            const res = await fetch('/api/friends', { cache: 'no-store' })
 
-    const [onlineIds, setOnlineIds] = useState<string[]>([])
+            if (!res.ok) throw new Error(`HTTP ${res.status}`)
 
-    useEffect(() => {
-        if (myId && myId !== "Log in to see ID") {
-            const socket = io('https://gamematch-backend-9y1r.onrender.com')
-            socket.emit('user_connected', myId)
-            socket.on('update_online_users', (users: string[]) => {
-                setOnlineIds(users)
-            })
-            return () => {
-                socket.disconnect()
-            }
+            setData((await res.json()) as FriendsResponse)
+        } catch (error) {
+            console.error("Failed to load friends data:", error)
         }
-    }, [myId])
-
-    const loadFriendsData = useCallback(() => {
-        fetch('/api/friends')
-            .then(async (res) => {
-                if (!res.ok) throw new Error(res.status === 401 ? "Not logged in" : "Server error")
-                return res.json()
-            })
-            .then(data => {
-                setMyId(data.myId)
-                setReceivedRequests(data.received || [])
-                setSentRequests(data.sent || [])
-            })
-            .catch(err => {
-                console.error("Failed to load friends data:", err)
-                setMyId("Log in to see ID")
-            })
     }, [])
 
     useEffect(() => {
-        if (isOpen) loadFriendsData()
-        const interval = setInterval(loadFriendsData, 10000)
+        if (!isAuthenticated || !isOpen) return
+
+        const interval = setInterval(() => void loadFriends(), POLL_INTERVAL_MS)
         return () => clearInterval(interval)
+    }, [isAuthenticated, isOpen, loadFriends])
 
-    }, [isOpen, loadFriendsData])
+    useEffect(() => {
+        if (!isAuthenticated) return
 
-    const handleCopyId = () => {
-        if (myId && myId !== "Log in to see ID") {
-            void navigator.clipboard.writeText(myId)
+        socket.connect()
+
+        return () => {
+            socket.disconnect()
+        }
+    }, [isAuthenticated])
+
+    const { incomingPending, acceptedFriends } = useMemo(() => {
+        const received = data?.received ?? []
+        const sent = data?.sent ?? []
+
+        return {
+            incomingPending: received.filter((request) => request.status === 'PENDING'),
+            acceptedFriends: [
+                ...received.filter((request) => request.status === 'ACCEPTED').map((request) => request.sender),
+                ...sent.filter((request) => request.status === 'ACCEPTED').map((request) => request.receiver),
+            ],
+        }
+    }, [data])
+
+    const friendIdsKey = acceptedFriends.map((friend) => friend.id).join(',')
+
+    useEffect(() => {
+        if (!isAuthenticated || !isOpen || !friendIdsKey) return
+
+        const ids = friendIdsKey.split(',')
+
+        const checkOnline = () => {
+            if (socket.connected) {
+                socket.emit('check_online', ids, setOnlineIds)
+            }
+        }
+
+        checkOnline()
+        socket.on('connect', checkOnline)
+
+        const interval = setInterval(checkOnline, POLL_INTERVAL_MS)
+
+        return () => {
+            socket.off('connect', checkOnline)
+            clearInterval(interval)
+        }
+    }, [isAuthenticated, isOpen, friendIdsKey])
+
+    useEffect(() => {
+        if (!isCopied) return
+
+        const timer = setTimeout(() => setIsCopied(false), 2000)
+        return () => clearTimeout(timer)
+    }, [isCopied])
+
+    useEffect(() => {
+        if (!requestMessage) return
+
+        const timer = setTimeout(() => setRequestMessage(''), 2500)
+        return () => clearTimeout(timer)
+    }, [requestMessage])
+
+    const openMenu = () => {
+        setIsOpen(true)
+
+        if (isAuthenticated) {
+            void loadFriends()
+        }
+    }
+
+    const handleCopyId = async () => {
+        if (!data?.myId) return
+
+        try {
+            await navigator.clipboard.writeText(data.myId)
             setIsCopied(true)
-            setTimeout(() => setIsCopied(false), 2000)
+        } catch {
+            console.error("Clipboard is not available")
         }
     }
 
     const handleAddFriend = async () => {
-        if (!friendIdInput.trim()) return
+        const targetId = friendIdInput.trim()
+
+        if (!targetId) return
 
         setIsSending(true)
         setRequestMessage('')
@@ -92,16 +155,16 @@ export default function FriendsMenu() {
             const res = await fetch('/api/friends', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ targetId: friendIdInput.trim() })
+                body: JSON.stringify({ targetId }),
             })
 
             if (res.ok) {
                 setRequestMessage('Request sent successfully!')
                 setFriendIdInput('')
-                loadFriendsData()
+                void loadFriends()
             } else {
-                const errorText = await res.text()
-                setRequestMessage(errorText || 'Failed to send request')
+                const body = (await res.json().catch(() => null)) as { message?: string } | null
+                setRequestMessage(body?.message || 'Failed to send request')
                 setIsError(true)
             }
         } catch {
@@ -109,49 +172,52 @@ export default function FriendsMenu() {
             setIsError(true)
         } finally {
             setIsSending(false)
-            setTimeout(() => setRequestMessage(''), 2000)
         }
     }
 
-    const handleResponse = async (requestId: string, action: 'ACCEPT' | 'DECLINE')=> {
+    const handleResponse = async (requestId: string, action: 'ACCEPT' | 'DECLINE') => {
         try {
             const res = await fetch('/api/friends', {
                 method: 'PATCH',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ requestId, action })
+                body: JSON.stringify({ requestId, action }),
             })
 
             if (res.ok) {
-                loadFriendsData()
+                void loadFriends()
             }
-        } catch (err) {
-            console.error("Failed to respond to request", err)
+        } catch (error) {
+            console.error("Failed to respond to request", error)
         }
     }
 
-    const incomingPending = receivedRequests.filter(r => r.status === 'PENDING')
-
-    const acceptedFriends = [
-        ...receivedRequests.filter(r => r.status === 'ACCEPTED').map(r => r.sender),
-        ...sentRequests.filter(r => r.status === 'ACCEPTED').map(r => r.receiver),
-    ]
-
     return (
         <>
-        <button
-            onClick={() => setIsOpen(true)}
-            className="flex items-center gap-2 bg-sky-500 text-white px-5 py-2 rounded-xl font-bold hover:bg-sky-400 transition-all shadow-md"
-        >
-            <Users size={20} />
-            Friends
-        </button>
+            <button
+                type="button"
+                onClick={openMenu}
+                className="flex items-center gap-2 bg-sky-500 text-white px-5 py-2 rounded-xl font-bold hover:bg-sky-400 transition-all shadow-md"
+            >
+                <Users size={20} />
+                Friends
+            </button>
 
             {isOpen && (
-                <div className="absolute inset-0 bg-sky-950/80 backdrop-blur-sm z-50 flex items-end sm:justify-end sm:items-start">
-                    <div className="w-full sm:max-w-md bg-sky-900 border-l border-sky-800 h-[85vh] sm:h-full rounded-t-3xl sm:rounded-none sm:rounded-l-3xl shadow-2xl p-6 overflow-y-auto animate-in slide-in-from-bottom sm:slide-in-from-right duration-300">
+                <div
+                    role="dialog"
+                    aria-modal="true"
+                    aria-label="Friends"
+                    className="fixed inset-0 bg-sky-950/80 backdrop-blur-sm z-50 flex items-end sm:justify-end sm:items-start"
+                >
+                    <div className="w-full sm:max-w-md bg-sky-900 border-l border-sky-800 h-[85dvh] sm:h-full rounded-t-3xl sm:rounded-none sm:rounded-l-3xl shadow-2xl p-6 overflow-y-auto animate-in slide-in-from-bottom sm:slide-in-from-right duration-300">
                         <div className="flex justify-between items-center mb-8">
                             <h2 className="text-3xl font-black text-white">Friends</h2>
-                            <button onClick={() => setIsOpen(false)} className="text-sky-300 hover:text-white hover:scale-110 transition-all">
+                            <button
+                                type="button"
+                                aria-label="Close"
+                                onClick={() => setIsOpen(false)}
+                                className="text-sky-300 hover:text-white hover:scale-110 transition-all"
+                            >
                                 <X size={28} />
                             </button>
                         </div>
@@ -162,11 +228,13 @@ export default function FriendsMenu() {
                             </p>
                             <div className="flex gap-2">
                                 <code className="flex-1 bg-sky-900 border border-sky-700 p-2 rounded-lg text-sky-200 font-mono text-sm overflow-hidden text-ellipsis">
-                                    {myId || 'Loading...'}
+                                    {isAuthenticated ? (data?.myId ?? 'Loading...') : 'Log in to see ID'}
                                 </code>
                                 <button
+                                    type="button"
                                     onClick={handleCopyId}
-                                    className="flex items-center justify-center gap-2 bg-sky-500 text-white px-4 py-2 rounded-lg font-bold hover:bg-sky-400 transition-all w-24"
+                                    disabled={!data?.myId}
+                                    className="flex items-center justify-center gap-2 bg-sky-500 text-white px-4 py-2 rounded-lg font-bold hover:bg-sky-400 transition-all w-24 disabled:opacity-50"
                                 >
                                     {isCopied ? <Check size={18} /> : <Copy size={18} />}
                                     {isCopied ? 'Copied' : 'Copy'}
@@ -183,10 +251,11 @@ export default function FriendsMenu() {
                                     type="text"
                                     placeholder="Paste friend's id here..."
                                     value={friendIdInput}
-                                    onChange={(e) => setFriendIdInput(e.target.value)}
+                                    onChange={(event) => setFriendIdInput(event.target.value)}
                                     className="w-full bg-sky-900 border border-sky-700 p-3 rounded-lg text-sky-200 font-mono text-sm focus:outline-none focus:ring-2 focus:ring-sky-500 placeholder-sky-600 transition-all"
                                 />
                                 <button
+                                    type="button"
                                     onClick={handleAddFriend}
                                     disabled={isSending || !friendIdInput.trim()}
                                     className={`w-full py-2.5 rounded-lg font-bold transition-all shadow-md flex items-center justify-center gap-2 ${
@@ -211,38 +280,32 @@ export default function FriendsMenu() {
                                     Friend Requests ({incomingPending.length})
                                 </p>
                                 <div className="flex flex-col gap-3">
-                                    {incomingPending.map((req) => (
-                                        <div key={req.id} className="flex items-center justify-between bg-sky-900 p-3 rounded-lg border border-sky-800">
+                                    {incomingPending.map((request) => (
+                                        <div
+                                            key={request.id}
+                                            className="flex items-center justify-between bg-sky-900 p-3 rounded-lg border border-sky-800"
+                                        >
                                             <div className="flex items-center gap-3">
-                                                {req.sender.image ? (
-                                                    <Image
-                                                        src={req.sender.image}
-                                                        alt={req.sender.name || 'Avatar'}
-                                                        width={32}
-                                                        height={32}
-                                                        className="w-8 h-8 rounded-full border border-sky-700 object-cover"
-                                                        referrerPolicy="no-referrer"
-                                                    />
-                                                ) : (
-                                                    <div className="w-8 h-8 rounded-full bg-sky-800 border border-sky-700 flex items-center justify-center">
-                                                        <User size={14} className="text-sky-300" />
-                                                    </div>
-                                                )}
+                                                <Avatar src={request.sender.image} name={request.sender.name} size={32} />
                                                 <span className="font-bold text-white text-sm">
-                                                    {req.sender.name || req.sender.email}
+                                                    {request.sender.name || 'Unknown'}
                                                 </span>
                                             </div>
                                             <div className="flex gap-2">
                                                 <button
-                                                onClick={() => handleResponse(req.id, 'ACCEPT')}
-                                                className="p-2 bg-emerald-600/30 text-emerald-400 border border-emerald-500/50 rounded-lg hover:bg-emerald-500 hover:text-white transition-all"
-                                                title="Accept"
+                                                    type="button"
+                                                    onClick={() => handleResponse(request.id, 'ACCEPT')}
+                                                    className="p-2 bg-emerald-600/30 text-emerald-400 border border-emerald-500/50 rounded-lg hover:bg-emerald-500 hover:text-white transition-all"
+                                                    aria-label="Accept"
+                                                    title="Accept"
                                                 >
                                                     <UserCheck size={16} />
                                                 </button>
                                                 <button
-                                                    onClick={() => handleResponse(req.id, 'DECLINE')}
+                                                    type="button"
+                                                    onClick={() => handleResponse(request.id, 'DECLINE')}
                                                     className="p-2 bg-rose-600/30 text-rose-400 border border-rose-500/50 rounded-lg hover:bg-rose-500 hover:text-white transition-all"
+                                                    aria-label="Decline"
                                                     title="Decline"
                                                 >
                                                     <UserX size={16} />
@@ -264,52 +327,43 @@ export default function FriendsMenu() {
                                 </p>
                             ) : (
                                 <div className="flex flex-col gap-2">
-                                    {acceptedFriends.map((friend) => (
-                                        <div key={friend.id} className="flex items-center gap-3 bg-sky-900 p-3 rounded-lg border border-sky-800 hover:bg-sky-800/80 cursor-pointer transition-all">
-                                            {friend.image ? (
-                                                <Image
-                                                    src={friend.image}
-                                                    alt={friend.name || 'Avatar'}
-                                                    width={40}
-                                                    height={40}
-                                                    className="w-10 h-10 rounded-full border border-sky-700 object-cover"
-                                                    referrerPolicy="no-referrer"
-                                                />
-                                            ) : (
-                                                <div className="w-10 h-10 rounded-full bg-sky-800 border border-sky-700 flex items-center justify-center">
-                                                    <User size={16} className="text-sky-300" />
-                                                </div>
-                                            )}
+                                    {acceptedFriends.map((friend) => {
+                                        const isOnline = onlineIds.includes(friend.id)
 
-                                            <div className="flex flex-col">
-                                                <span className="font-bold text-white text-sm">
-                                                    {friend.name || friend.email}
-                                                </span>
-                                                <div className="flex items-center gap-1.5 mt-0.5">
-                                                    <div
-                                                        className={`w-2 h-2 rounded-full ${
-                                                        onlineIds.includes(friend.id)
-                                                        ? 'bg-emerald-500 shadow-[0_0_8px_rgba(16,185,129,0.6)]'
-                                                        : 'bg-slate-500'
-                                                    }`}></div>
-                                                    <span
-                                                        className={`text-xs font-semibold ${
-                                                            onlineIds.includes(friend.id)
-                                                                ? 'text-emerald-400'
-                                                                : 'text-slate-400'
-                                                        }`}
-                                                    >
-                                                        {onlineIds.includes(friend.id) ? 'Online' : 'Offline'}
+                                        return (
+                                            <div
+                                                key={friend.id}
+                                                className="flex items-center gap-3 bg-sky-900 p-3 rounded-lg border border-sky-800 hover:bg-sky-800/80 transition-all"
+                                            >
+                                                <Avatar src={friend.image} name={friend.name} size={40} />
+
+                                                <div className="flex flex-col">
+                                                    <span className="font-bold text-white text-sm">
+                                                        {friend.name || 'Unknown'}
                                                     </span>
+                                                    <div className="flex items-center gap-1.5 mt-0.5">
+                                                        <div
+                                                            className={`w-2 h-2 rounded-full ${
+                                                                isOnline
+                                                                    ? 'bg-emerald-500 shadow-[0_0_8px_rgba(16,185,129,0.6)]'
+                                                                    : 'bg-slate-500'
+                                                            }`}
+                                                        ></div>
+                                                        <span
+                                                            className={`text-xs font-semibold ${
+                                                                isOnline ? 'text-emerald-400' : 'text-slate-400'
+                                                            }`}
+                                                        >
+                                                            {isOnline ? 'Online' : 'Offline'}
+                                                        </span>
+                                                    </div>
                                                 </div>
                                             </div>
-
-                                        </div>
-                                    ))}
+                                        )
+                                    })}
                                 </div>
                             )}
                         </div>
-
                     </div>
                 </div>
             )}

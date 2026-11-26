@@ -1,96 +1,115 @@
-import {GameTypes} from "@/services/rawg.service"
-import {create} from "zustand";
-import { persist } from "zustand/middleware";
+import { create } from "zustand"
+import { persist } from "zustand/middleware"
+import type { GameTypes } from "@/types/game"
+
+interface HistoryEntry {
+    game: GameTypes
+    action: "like" | "dislike"
+}
 
 interface GameState {
-    games: GameTypes[],
-    likedGames: GameTypes[],
-    dislikedGames: GameTypes[],
-    history: { game: GameTypes; action: "like" | "dislike" }[]
-    addGames: ( newGames: GameTypes[] ) => void
+    roomId: string | null
+    games: GameTypes[]
+    likedGames: GameTypes[]
+    dislikedGames: GameTypes[]
+    history: HistoryEntry[]
     matchedGames: GameTypes[]
-    addMatchedGame: ( game: GameTypes ) => void
-
-    setGames: (games: GameTypes[]) => void
+    enterRoom: (roomId: string) => void
+    addGames: (newGames: GameTypes[]) => void
     swipeRight: () => void
     swipeLeft: () => void
     undoSwipe: () => void
-    setMatchedGame: ( games: GameTypes[]) => void
+    addMatchedGame: (game: GameTypes) => void
+    setMatchedGames: (games: GameTypes[]) => void
+    reset: () => void
+}
+
+const emptyRoomState = {
+    games: [] as GameTypes[],
+    likedGames: [] as GameTypes[],
+    dislikedGames: [] as GameTypes[],
+    history: [] as HistoryEntry[],
 }
 
 export const useGameStore = create<GameState>()(
     persist(
         (set) => ({
-            games: [],
-            likedGames: [],
-            dislikedGames: [],
-            history: [],
+            roomId: null,
+            ...emptyRoomState,
             matchedGames: [],
 
-            setMatchedGame: (games) => set({ matchedGames: games}),
-
-            addMatchedGame: (game) => set((state) => {
-                if (state.matchedGames.some(g => g.id === game.id)) return state
-                return { matchedGames: [...state.matchedGames, game] }
+            enterRoom: (roomId) => set((state) => {
+                if (state.roomId === roomId) return state
+                return { roomId, ...emptyRoomState }
             }),
-            setGames: (games) => set({games}),
 
             addGames: (newGames) => set((state) => {
                 const seenIds = new Set([
-                    ...state.games.map(g => g.id),
-                    ...state.likedGames.map(g => g.id),
-                    ...state.dislikedGames.map(g => g.id)
+                    ...state.games.map((game) => game.id),
+                    ...state.likedGames.map((game) => game.id),
+                    ...state.dislikedGames.map((game) => game.id),
                 ])
-                const uniqueGames = newGames.filter(g => !seenIds.has(g.id))
+                const uniqueGames = newGames.filter((game) => !seenIds.has(game.id))
                 return { games: [...state.games, ...uniqueGames] }
             }),
 
             swipeRight: () => set((state) => {
-                if (state.games.length === 0) {
-                    return state
-                }
                 const currentGame = state.games[0]
+                if (!currentGame) return state
                 return {
                     likedGames: [...state.likedGames, currentGame],
                     games: state.games.slice(1),
-                    history: [...state.history, {game: currentGame, action: 'like'}]
+                    history: [...state.history, { game: currentGame, action: "like" }],
                 }
             }),
+
             swipeLeft: () => set((state) => {
-                if (state.games.length === 0) {
-                    return state
-                }
                 const currentGame = state.games[0]
+                if (!currentGame) return state
                 return {
                     dislikedGames: [...state.dislikedGames, currentGame],
                     games: state.games.slice(1),
-                    history: [...state.history, {game: currentGame, action: 'dislike'}]
+                    history: [...state.history, { game: currentGame, action: "dislike" }],
                 }
             }),
+
             undoSwipe: () => set((state) => {
-                if (state.history.length === 0) {
-                    return state
-                }
+                const lastEntry = state.history.at(-1)
+                if (!lastEntry) return state
 
-                const lastHistoryEntry = state.history[state.history.length - 1]
+                const { game, action } = lastEntry
 
-                if (lastHistoryEntry.action === "like") {
-                    return {
-                        games: [lastHistoryEntry.game, ...state.games],
-                        likedGames: state.likedGames.slice(0, -1),
-                        history: state.history.slice(0, -1)
-                    }
-                } else {
-                    return {
-                        games: [lastHistoryEntry.game, ...state.games],
-                        dislikedGames: state.dislikedGames.slice(0, -1),
-                        history: state.history.slice(0, -1)
-                    }
+                return {
+                    games: [game, ...state.games],
+                    likedGames: action === "like"
+                        ? state.likedGames.filter((item) => item.id !== game.id)
+                        : state.likedGames,
+                    dislikedGames: action === "dislike"
+                        ? state.dislikedGames.filter((item) => item.id !== game.id)
+                        : state.dislikedGames,
+                    history: state.history.slice(0, -1),
                 }
-            })
+            }),
+
+            addMatchedGame: (game) => set((state) => {
+                if (state.matchedGames.some((item) => item.id === game.id)) return state
+                return { matchedGames: [...state.matchedGames, game] }
+            }),
+
+            setMatchedGames: (games) => set({ matchedGames: games }),
+
+            reset: () => set({ roomId: null, ...emptyRoomState, matchedGames: [] }),
         }),
         {
-            name: 'game-match-storage'
+            name: "game-match-storage",
+            skipHydration: true,
+            partialize: (state) => ({
+                roomId: state.roomId,
+                games: state.games,
+                likedGames: state.likedGames,
+                dislikedGames: state.dislikedGames,
+                history: state.history,
+            }),
         }
     )
 )
