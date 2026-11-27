@@ -1,8 +1,17 @@
 'use client'
 
-import { useCallback, useEffect, useMemo, useState } from "react"
+import { useEffect, useMemo, useState } from "react"
 import { useSession } from "next-auth/react"
-import { Users, X, Check, Copy, UserCheck, UserX } from "lucide-react"
+import { AnimatePresence, motion } from "motion/react"
+import {
+    CheckIcon,
+    CopyIcon,
+    PaperPlaneTiltIcon,
+    UserCheckIcon,
+    UserMinusIcon,
+    UsersThreeIcon,
+    XIcon,
+} from "@phosphor-icons/react"
 import Avatar from "@/components/Avatar"
 import { socket } from "@/sockets"
 
@@ -27,14 +36,22 @@ interface FriendsResponse {
     sent: FriendRequest[]
 }
 
+interface FriendsDrawerProps {
+    isOpen: boolean
+    onClose: () => void
+}
+
 const POLL_INTERVAL_MS = 10_000
 
-export default function FriendsMenu() {
+const sectionClass = "rounded-2xl border border-white/10 bg-white/5 p-4"
+const sectionTitleClass = "mb-3 text-sm font-semibold tracking-wide text-sky-400 uppercase"
+
+export default function FriendsDrawer({ isOpen, onClose }: FriendsDrawerProps) {
     const { status } = useSession()
     const isAuthenticated = status === 'authenticated'
 
-    const [isOpen, setIsOpen] = useState(false)
     const [data, setData] = useState<FriendsResponse | null>(null)
+    const [refreshKey, setRefreshKey] = useState(0)
     const [onlineIds, setOnlineIds] = useState<string[]>([])
     const [isCopied, setIsCopied] = useState(false)
 
@@ -43,34 +60,42 @@ export default function FriendsMenu() {
     const [requestMessage, setRequestMessage] = useState('')
     const [isError, setIsError] = useState(false)
 
-    const loadFriends = useCallback(async () => {
-        try {
-            const res = await fetch('/api/friends', { cache: 'no-store' })
-
-            if (!res.ok) throw new Error(`HTTP ${res.status}`)
-
-            setData((await res.json()) as FriendsResponse)
-        } catch (error) {
-            console.error("Failed to load friends data:", error)
-        }
-    }, [])
-
     useEffect(() => {
         if (!isAuthenticated || !isOpen) return
 
-        const interval = setInterval(() => void loadFriends(), POLL_INTERVAL_MS)
-        return () => clearInterval(interval)
-    }, [isAuthenticated, isOpen, loadFriends])
+        let isActive = true
 
-    useEffect(() => {
-        if (!isAuthenticated) return
+        const load = () => {
+            fetch('/api/friends', { cache: 'no-store' })
+                .then((res) => {
+                    if (!res.ok) throw new Error(`HTTP ${res.status}`)
+                    return res.json() as Promise<FriendsResponse>
+                })
+                .then((json) => {
+                    if (isActive) setData(json)
+                })
+                .catch((error) => console.error("Failed to load friends data:", error))
+        }
 
-        socket.connect()
+        load()
+        const interval = setInterval(load, POLL_INTERVAL_MS)
 
         return () => {
-            socket.disconnect()
+            isActive = false
+            clearInterval(interval)
         }
-    }, [isAuthenticated])
+    }, [isAuthenticated, isOpen, refreshKey])
+
+    useEffect(() => {
+        if (!isOpen) return
+
+        const handleKeyDown = (event: KeyboardEvent) => {
+            if (event.key === "Escape") onClose()
+        }
+
+        document.addEventListener("keydown", handleKeyDown)
+        return () => document.removeEventListener("keydown", handleKeyDown)
+    }, [isOpen, onClose])
 
     const { incomingPending, acceptedFriends } = useMemo(() => {
         const received = data?.received ?? []
@@ -123,14 +148,6 @@ export default function FriendsMenu() {
         return () => clearTimeout(timer)
     }, [requestMessage])
 
-    const openMenu = () => {
-        setIsOpen(true)
-
-        if (isAuthenticated) {
-            void loadFriends()
-        }
-    }
-
     const handleCopyId = async () => {
         if (!data?.myId) return
 
@@ -161,7 +178,7 @@ export default function FriendsMenu() {
             if (res.ok) {
                 setRequestMessage('Request sent successfully!')
                 setFriendIdInput('')
-                void loadFriends()
+                setRefreshKey((value) => value + 1)
             } else {
                 const body = (await res.json().catch(() => null)) as { message?: string } | null
                 setRequestMessage(body?.message || 'Failed to send request')
@@ -184,90 +201,103 @@ export default function FriendsMenu() {
             })
 
             if (res.ok) {
-                void loadFriends()
+                setRefreshKey((value) => value + 1)
             }
         } catch (error) {
             console.error("Failed to respond to request", error)
         }
     }
 
-    return (
-        <>
-            <button
-                type="button"
-                onClick={openMenu}
-                className="flex items-center gap-2 bg-sky-500 text-white px-5 py-2 rounded-xl font-bold hover:bg-sky-400 transition-all shadow-md"
-            >
-                <Users size={20} />
-                Friends
-            </button>
+    const isSendDisabled = isSending || !friendIdInput.trim()
 
+    return (
+        <AnimatePresence>
             {isOpen && (
-                <div
-                    role="dialog"
-                    aria-modal="true"
-                    aria-label="Friends"
-                    className="fixed inset-0 bg-sky-950/80 backdrop-blur-sm z-50 flex items-end sm:justify-end sm:items-start"
+                <motion.div
+                    key="friends-drawer"
+                    className="fixed inset-0 z-[60]"
+                    initial={{ opacity: 0 }}
+                    animate={{ opacity: 1 }}
+                    exit={{ opacity: 0 }}
+                    transition={{ duration: 0.2 }}
                 >
-                    <div className="w-full sm:max-w-md bg-sky-900 border-l border-sky-800 h-[85dvh] sm:h-full rounded-t-3xl sm:rounded-none sm:rounded-l-3xl shadow-2xl p-6 overflow-y-auto animate-in slide-in-from-bottom sm:slide-in-from-right duration-300">
-                        <div className="flex justify-between items-center mb-8">
-                            <h2 className="text-3xl font-black text-white">Friends</h2>
+                    <button
+                        type="button"
+                        aria-label="Close friends"
+                        onClick={onClose}
+                        className="absolute inset-0 cursor-default bg-black/50 backdrop-blur-sm"
+                    />
+
+                    <motion.aside
+                        role="dialog"
+                        aria-modal="true"
+                        aria-label="Friends"
+                        initial={{ x: "100%" }}
+                        animate={{ x: 0 }}
+                        exit={{ x: "100%" }}
+                        transition={{ type: "spring", stiffness: 320, damping: 34 }}
+                        className="absolute inset-y-0 right-0 flex w-full max-w-md flex-col gap-5 overflow-y-auto border-l border-white/10 bg-sky-950/90 p-6 shadow-2xl backdrop-blur-xl"
+                    >
+                        <div className="flex items-center justify-between">
+                            <h2 className="flex items-center gap-3 text-3xl font-black text-white">
+                                <span className="flex h-10 w-10 items-center justify-center rounded-xl bg-linear-to-br from-sky-400 to-cyan-500 text-sky-950">
+                                    <UsersThreeIcon size={24} weight="fill" />
+                                </span>
+                                Friends
+                            </h2>
                             <button
                                 type="button"
                                 aria-label="Close"
-                                onClick={() => setIsOpen(false)}
-                                className="text-sky-300 hover:text-white hover:scale-110 transition-all"
+                                onClick={onClose}
+                                className="text-sky-300 transition-all hover:scale-110 hover:text-white"
                             >
-                                <X size={28} />
+                                <XIcon size={28} weight="bold" />
                             </button>
                         </div>
 
-                        <div className="bg-sky-950 p-4 rounded-xl border border-sky-800 mb-8">
-                            <p className="text-sky-500 font-semibold mb-2 text-sm uppercase">
-                                My Friend ID
-                            </p>
+                        <div className={sectionClass}>
+                            <p className={sectionTitleClass}>My Friend ID</p>
                             <div className="flex gap-2">
-                                <code className="flex-1 bg-sky-900 border border-sky-700 p-2 rounded-lg text-sky-200 font-mono text-sm overflow-hidden text-ellipsis">
-                                    {isAuthenticated ? (data?.myId ?? 'Loading...') : 'Log in to see ID'}
+                                <code className="flex-1 overflow-hidden rounded-lg border border-white/10 bg-black/20 p-2 font-mono text-sm text-ellipsis text-sky-200">
+                                    {data?.myId ?? 'Loading...'}
                                 </code>
                                 <button
                                     type="button"
                                     onClick={handleCopyId}
                                     disabled={!data?.myId}
-                                    className="flex items-center justify-center gap-2 bg-sky-500 text-white px-4 py-2 rounded-lg font-bold hover:bg-sky-400 transition-all w-24 disabled:opacity-50"
+                                    className="flex w-28 items-center justify-center gap-2 rounded-lg bg-sky-500 px-3 py-2 font-bold text-sky-950 transition-all hover:bg-sky-400 disabled:opacity-50"
                                 >
-                                    {isCopied ? <Check size={18} /> : <Copy size={18} />}
+                                    {isCopied ? <CheckIcon size={18} weight="bold" /> : <CopyIcon size={18} weight="duotone" />}
                                     {isCopied ? 'Copied' : 'Copy'}
                                 </button>
                             </div>
                         </div>
 
-                        <div className="bg-sky-950 p-4 rounded-xl border border-sky-800 mb-8">
-                            <p className="text-sky-500 font-semibold mb-3 text-sm uppercase">
-                                Add Friend
-                            </p>
+                        <div className={sectionClass}>
+                            <p className={sectionTitleClass}>Add Friend</p>
                             <div className="flex flex-col gap-3">
                                 <input
                                     type="text"
                                     placeholder="Paste friend's id here..."
                                     value={friendIdInput}
                                     onChange={(event) => setFriendIdInput(event.target.value)}
-                                    className="w-full bg-sky-900 border border-sky-700 p-3 rounded-lg text-sky-200 font-mono text-sm focus:outline-none focus:ring-2 focus:ring-sky-500 placeholder-sky-600 transition-all"
+                                    className="w-full rounded-lg border border-white/10 bg-black/20 p-3 font-mono text-sm text-sky-100 placeholder-sky-600 transition-all focus:ring-2 focus:ring-sky-500 focus:outline-none"
                                 />
                                 <button
                                     type="button"
                                     onClick={handleAddFriend}
-                                    disabled={isSending || !friendIdInput.trim()}
-                                    className={`w-full py-2.5 rounded-lg font-bold transition-all shadow-md flex items-center justify-center gap-2 ${
-                                        isSending || !friendIdInput.trim()
-                                            ? 'bg-sky-800/50 text-sky-600 cursor-not-allowed'
-                                            : 'bg-sky-500 text-white hover:bg-sky-400 active:scale-95'
+                                    disabled={isSendDisabled}
+                                    className={`flex w-full items-center justify-center gap-2 rounded-lg py-2.5 font-bold shadow-md transition-all ${
+                                        isSendDisabled
+                                            ? 'cursor-not-allowed bg-white/5 text-sky-600'
+                                            : 'bg-sky-500 text-sky-950 hover:bg-sky-400 active:scale-95'
                                     }`}
                                 >
+                                    <PaperPlaneTiltIcon size={18} weight="duotone" />
                                     {isSending ? 'Sending...' : 'Send Request'}
                                 </button>
                                 {requestMessage && (
-                                    <p className={`text-center text-sm font-bold mt-1 ${isError ? 'text-rose-400' : 'text-emerald-400'}`}>
+                                    <p className={`text-center text-sm font-bold ${isError ? 'text-rose-400' : 'text-emerald-400'}`}>
                                         {requestMessage}
                                     </p>
                                 )}
@@ -275,19 +305,17 @@ export default function FriendsMenu() {
                         </div>
 
                         {incomingPending.length > 0 && (
-                            <div className="bg-sky-950 p-4 rounded-xl border border-sky-800 mb-6">
-                                <p className="text-sky-400 font-semibold mb-3 text-sm uppercase">
-                                    Friend Requests ({incomingPending.length})
-                                </p>
+                            <div className={sectionClass}>
+                                <p className={sectionTitleClass}>Friend Requests ({incomingPending.length})</p>
                                 <div className="flex flex-col gap-3">
                                     {incomingPending.map((request) => (
                                         <div
                                             key={request.id}
-                                            className="flex items-center justify-between bg-sky-900 p-3 rounded-lg border border-sky-800"
+                                            className="flex items-center justify-between rounded-xl border border-white/10 bg-white/5 p-3"
                                         >
                                             <div className="flex items-center gap-3">
                                                 <Avatar src={request.sender.image} name={request.sender.name} size={32} />
-                                                <span className="font-bold text-white text-sm">
+                                                <span className="text-sm font-bold text-white">
                                                     {request.sender.name || 'Unknown'}
                                                 </span>
                                             </div>
@@ -295,20 +323,20 @@ export default function FriendsMenu() {
                                                 <button
                                                     type="button"
                                                     onClick={() => handleResponse(request.id, 'ACCEPT')}
-                                                    className="p-2 bg-emerald-600/30 text-emerald-400 border border-emerald-500/50 rounded-lg hover:bg-emerald-500 hover:text-white transition-all"
+                                                    className="rounded-lg border border-emerald-500/50 bg-emerald-600/30 p-2 text-emerald-300 transition-all hover:bg-emerald-500 hover:text-white"
                                                     aria-label="Accept"
                                                     title="Accept"
                                                 >
-                                                    <UserCheck size={16} />
+                                                    <UserCheckIcon size={18} weight="duotone" />
                                                 </button>
                                                 <button
                                                     type="button"
                                                     onClick={() => handleResponse(request.id, 'DECLINE')}
-                                                    className="p-2 bg-rose-600/30 text-rose-400 border border-rose-500/50 rounded-lg hover:bg-rose-500 hover:text-white transition-all"
+                                                    className="rounded-lg border border-rose-500/50 bg-rose-600/30 p-2 text-rose-300 transition-all hover:bg-rose-500 hover:text-white"
                                                     aria-label="Decline"
                                                     title="Decline"
                                                 >
-                                                    <UserX size={16} />
+                                                    <UserMinusIcon size={18} weight="duotone" />
                                                 </button>
                                             </div>
                                         </div>
@@ -317,12 +345,10 @@ export default function FriendsMenu() {
                             </div>
                         )}
 
-                        <div className="bg-sky-950 p-4 rounded-xl border border-sky-800">
-                            <p className="text-sky-500 font-semibold mb-3 text-sm uppercase">
-                                My Friends ({acceptedFriends.length})
-                            </p>
+                        <div className={sectionClass}>
+                            <p className={sectionTitleClass}>My Friends ({acceptedFriends.length})</p>
                             {acceptedFriends.length === 0 ? (
-                                <p className="text-center text-sky-500/70 text-sm py-4 font-medium">
+                                <p className="py-4 text-center text-sm font-medium text-sky-500/70">
                                     No friends added yet
                                 </p>
                             ) : (
@@ -333,17 +359,17 @@ export default function FriendsMenu() {
                                         return (
                                             <div
                                                 key={friend.id}
-                                                className="flex items-center gap-3 bg-sky-900 p-3 rounded-lg border border-sky-800 hover:bg-sky-800/80 transition-all"
+                                                className="flex items-center gap-3 rounded-xl border border-white/10 bg-white/5 p-3 transition-all hover:bg-white/10"
                                             >
                                                 <Avatar src={friend.image} name={friend.name} size={40} />
 
                                                 <div className="flex flex-col">
-                                                    <span className="font-bold text-white text-sm">
+                                                    <span className="text-sm font-bold text-white">
                                                         {friend.name || 'Unknown'}
                                                     </span>
-                                                    <div className="flex items-center gap-1.5 mt-0.5">
+                                                    <div className="mt-0.5 flex items-center gap-1.5">
                                                         <div
-                                                            className={`w-2 h-2 rounded-full ${
+                                                            className={`h-2 w-2 rounded-full ${
                                                                 isOnline
                                                                     ? 'bg-emerald-500 shadow-[0_0_8px_rgba(16,185,129,0.6)]'
                                                                     : 'bg-slate-500'
@@ -364,9 +390,9 @@ export default function FriendsMenu() {
                                 </div>
                             )}
                         </div>
-                    </div>
-                </div>
+                    </motion.aside>
+                </motion.div>
             )}
-        </>
+        </AnimatePresence>
     )
 }

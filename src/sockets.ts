@@ -23,3 +23,17 @@ export const socket: Socket<ServerToClientEvents, ClientToServerEvents> = io(
         },
     }
 )
+
+let consumers = 0
+
+export const acquireSocket = () => {
+    consumers += 1
+
+    if (!socket.active) socket.connect()
+}
+
+export const releaseSocket = () => {
+    consumers = Math.max(0, consumers - 1)
+
+    if (consumers === 0) socket.disconnect()
+}

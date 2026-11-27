@@ -1,4 +1,8 @@
+'use client'
+
+import { useEffect } from "react"
 import Image from "next/image"
+import { X } from "lucide-react"
 import type { GameTypes } from "@/types/game"
 
 interface MatchHistoryProps {
@@ -7,37 +11,54 @@ interface MatchHistoryProps {
 }
 
 export default function MatchHistory({ games, onClose }: MatchHistoryProps) {
+    useEffect(() => {
+        const handleKeyDown = (event: KeyboardEvent) => {
+            if (event.key === "Escape") onClose()
+        }
+
+        document.addEventListener("keydown", handleKeyDown)
+        return () => document.removeEventListener("keydown", handleKeyDown)
+    }, [onClose])
+
     return (
-        <div
-            role="dialog"
-            aria-modal="true"
-            aria-label="Our games"
-            className="fixed inset-0 bg-sky-950/80 backdrop-blur-sm z-50 flex items-end sm:justify-end sm:items-start"
-        >
-            <div className="w-full sm:max-w-md bg-white h-[85dvh] sm:h-full rounded-t-3xl sm:rounded-none sm:rounded-l-3xl shadow-2xl p-6 overflow-y-auto animate-in slide-in-from-bottom sm:slide-in-from-right duration-300">
-                <div className="w-12 h-1.5 bg-sky-200 rounded-full mx-auto mb-6 sm:hidden"></div>
-                <div className="flex justify-between items-center mb-8">
-                    <h2 className="text-3xl font-black text-sky-900">Our games</h2>
+        <div className="fixed inset-0 z-[60]">
+            <button
+                type="button"
+                aria-label="Close matches"
+                onClick={onClose}
+                className="absolute inset-0 cursor-default bg-black/50 backdrop-blur-sm"
+            />
+
+            <div
+                role="dialog"
+                aria-modal="true"
+                aria-label="Our games"
+                className="absolute inset-x-0 bottom-0 h-[85dvh] overflow-y-auto rounded-t-3xl border border-white/10 bg-sky-950/90 p-6 shadow-2xl backdrop-blur-xl sm:inset-y-0 sm:right-0 sm:left-auto sm:h-full sm:w-full sm:max-w-md sm:rounded-none sm:rounded-l-3xl"
+            >
+                <div className="mx-auto mb-6 h-1.5 w-12 rounded-full bg-white/20 sm:hidden" />
+
+                <div className="mb-8 flex items-center justify-between">
+                    <h2 className="text-3xl font-black text-white">Our games</h2>
                     <button
                         type="button"
                         aria-label="Close"
                         onClick={onClose}
-                        className="text-2xl hover:scale-110 transition-transform"
+                        className="text-sky-300 transition-all hover:scale-110 hover:text-white"
                     >
-                        ❌
+                        <X size={28} />
                     </button>
                 </div>
 
                 {games.length === 0 ? (
-                    <p className="text-sky-600 text-center mt-10 font-medium">
+                    <p className="mt-10 text-center font-medium text-sky-300">
                         You haven&apos;t found any matches yet. Keep swiping!
                     </p>
                 ) : (
-                    <div className="flex flex-col gap-4">
+                    <ul className="flex flex-col gap-3">
                         {games.map((game) => (
-                            <div
+                            <li
                                 key={game.id}
-                                className="flex items-center gap-4 bg-sky-50 p-3 rounded-xl border border-sky-100"
+                                className="flex items-center gap-4 rounded-2xl border border-white/10 bg-white/5 p-3"
                             >
                                 {game.background_image ? (
                                     <Image
@@ -45,15 +66,15 @@ export default function MatchHistory({ games, onClose }: MatchHistoryProps) {
                                         alt={game.name}
                                         width={80}
                                         height={80}
-                                        className="w-20 h-20 object-cover rounded-lg shadow-sm"
+                                        className="h-20 w-20 rounded-xl object-cover shadow-sm"
                                     />
                                 ) : (
-                                    <div className="w-20 h-20 rounded-lg bg-sky-200" />
+                                    <div className="h-20 w-20 rounded-xl bg-sky-800" />
                                 )}
-                                <p className="font-bold text-sky-900 text-lg">{game.name}</p>
-                            </div>
+                                <p className="text-lg font-bold text-white">{game.name}</p>
+                            </li>
                         ))}
-                    </div>
+                    </ul>
                 )}
             </div>
         </div>

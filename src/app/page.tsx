@@ -3,11 +3,10 @@
 import { useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { useSession } from 'next-auth/react'
-import { Settings } from 'lucide-react'
+import { SlidersHorizontalIcon } from '@phosphor-icons/react'
 import { checkGameCount } from '@/services/rawg.service'
 import { buildRoomUrl, createRoomCode } from '@/lib/room'
-import FriendsMenu from '@/components/FriendsMenu'
-import Header from '@/components/Header'
+import DecorCards from '@/components/DecorCards'
 import SettingModal from '@/components/SettingModal'
 
 export default function Home() {
@@ -75,45 +74,43 @@ export default function Home() {
     }
 
     return (
-        <div className="flex relative flex-col items-center justify-center min-h-screen bg-sky-950 text-white px-4 pt-24 pb-12">
-            <Header />
+        <div className="relative flex min-h-screen flex-col items-center justify-center overflow-hidden px-4 pt-24 pb-16 text-white">
+            <DecorCards />
 
-            <h1 className="text-5xl font-black text-sky-400 mb-12 text-center drop-shadow-lg">
+            <h1 className="relative mb-10 text-center text-5xl font-black text-sky-400 drop-shadow-lg sm:text-6xl">
                 Game<span className="text-white">Match</span>
             </h1>
 
-            <div className="flex flex-col gap-6 w-full max-w-sm bg-sky-900 p-8 rounded-2xl shadow-2xl border border-sky-800">
+            <div className="relative flex w-full max-w-sm flex-col gap-6 rounded-3xl border border-white/10 bg-sky-900/40 p-8 shadow-2xl backdrop-blur-xl">
                 <button
                     type="button"
                     onClick={() => setIsModalOpen(true)}
-                    className="group w-full flex items-center justify-between px-5 py-3 mb-2 bg-sky-950 text-sky-200 rounded-xl border border-sky-800 hover:bg-sky-800 transition-colors"
+                    className="group flex w-full items-center justify-between rounded-xl border border-white/10 bg-white/5 px-5 py-3 text-sky-100 transition-colors hover:bg-white/10"
                 >
                     <span className="font-bold">Filters & Settings</span>
-                    <Settings size={18} className="text-sky-400 group-hover:rotate-90 transition-transform duration-300" />
+                    <SlidersHorizontalIcon size={22} weight="duotone" className="text-sky-400 transition-transform duration-300 group-hover:scale-110" />
                 </button>
-
-                <FriendsMenu />
 
                 <div className="flex flex-col gap-2">
                     <button
                         type="button"
                         onClick={handleCreateRoom}
                         disabled={isChecking}
-                        className={`w-full py-4 text-white rounded-xl font-bold text-xl transition-all shadow-lg ${
-                            isChecking ? 'bg-sky-700 cursor-not-allowed opacity-70' : 'bg-sky-500 hover:bg-sky-400 hover:scale-105'
+                        className={`w-full rounded-xl py-4 text-xl font-bold text-white shadow-[0_0_30px_rgba(14,165,233,0.35)] transition-all ${
+                            isChecking ? 'cursor-not-allowed bg-sky-700 opacity-70' : 'bg-sky-500 hover:scale-105 hover:bg-sky-400'
                         }`}
                     >
                         {isChecking ? 'Checking...' : 'Create room'}
                     </button>
                     {createError && (
-                        <p className="text-rose-400 text-sm font-bold text-center">{createError}</p>
+                        <p className="text-center text-sm font-bold text-rose-400">{createError}</p>
                     )}
                 </div>
 
-                <div className="flex items-center gap-4 my-2">
-                    <div className="flex-1 h-px bg-sky-700"></div>
-                    <span className="text-sky-300 font-medium uppercase text-sm">Or</span>
-                    <div className="flex-1 h-px bg-sky-700"></div>
+                <div className="my-1 flex items-center gap-4">
+                    <div className="h-px flex-1 bg-white/10"></div>
+                    <span className="text-sm font-medium uppercase text-sky-300">Or</span>
+                    <div className="h-px flex-1 bg-white/10"></div>
                 </div>
 
                 <div className="flex flex-col gap-3">
@@ -125,12 +122,12 @@ export default function Home() {
                         onKeyDown={(event) => {
                             if (event.key === 'Enter') handleJoinRoom()
                         }}
-                        className="w-full px-4 py-4 bg-sky-950 text-white placeholder-sky-600 rounded-xl outline-none focus:ring-2 focus:ring-sky-400 border border-sky-800 font-medium text-center text-lg"
+                        className="w-full rounded-xl border border-white/10 bg-black/20 px-4 py-4 text-center text-lg font-medium text-white placeholder-sky-500 outline-none focus:ring-2 focus:ring-sky-400"
                     />
                     <button
                         type="button"
                         onClick={handleJoinRoom}
-                        className="w-full py-4 bg-white text-sky-900 rounded-xl font-bold text-xl hover:bg-sky-50 hover:scale-105 transition-all shadow-lg"
+                        className="w-full rounded-xl bg-white py-4 text-xl font-bold text-sky-950 shadow-lg transition-all hover:scale-105 hover:bg-sky-50"
                     >
                         Enter
                     </button>
@@ -147,7 +144,7 @@ export default function Home() {
                 />
             )}
 
-            <div className="absolute bottom-6 text-sky-700 text-sm font-medium text-center w-full">
+            <div className="absolute bottom-6 w-full text-center text-sm font-medium text-sky-400/70">
                 © 2026 Nick Koida. All rights reserved.
             </div>
         </div>

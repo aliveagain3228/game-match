@@ -19,8 +19,8 @@ export default function RoomEntry() {
 
     if (!roomId) {
         return (
-            <div className="flex items-center justify-center min-h-screen bg-sky-50">
-                <p className="text-xl font-bold text-sky-900 animate-pulse">Creating a room...</p>
+            <div className="flex min-h-screen items-center justify-center">
+                <p className="animate-pulse text-xl font-bold text-sky-200">Creating a room...</p>
             </div>
         )
     }

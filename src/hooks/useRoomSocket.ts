@@ -1,7 +1,7 @@
 'use client'
 
 import { useCallback, useEffect, useState } from "react"
-import { socket } from "@/sockets"
+import { acquireSocket, releaseSocket, socket } from "@/sockets"
 import { useGameStore } from "@/store/useGameStore"
 import { saveMatch } from "@/services/matches.service"
 
@@ -10,17 +10,25 @@ interface RoomSetup {
     filter: string
 }
 
+export interface PeerNotice {
+    message: string
+    kind: "joined" | "left"
+}
+
 interface UseRoomSocketOptions {
     roomId: string
     filter: string
     enabled: boolean
 }
 
+const JOINED_NOTICE_MS = 3000
+const LEFT_NOTICE_MS = 5000
+
 export function useRoomSocket({ roomId, filter, enabled }: UseRoomSocketOptions) {
     const [setup, setSetup] = useState<RoomSetup | null>(null)
     const [roomError, setRoomError] = useState<string | null>(null)
     const [matchedGameId, setMatchedGameId] = useState<number | null>(null)
-    const [peerNotice, setPeerNotice] = useState<string | null>(null)
+    const [peerNotice, setPeerNotice] = useState<PeerNotice | null>(null)
 
     useEffect(() => {
         if (!enabled) return
@@ -30,6 +38,12 @@ export function useRoomSocket({ roomId, filter, enabled }: UseRoomSocketOptions)
 
         const shownMatches = new Set<number>()
         let noticeTimer: ReturnType<typeof setTimeout> | undefined
+
+        const showNotice = (notice: PeerNotice, duration: number) => {
+            setPeerNotice(notice)
+            clearTimeout(noticeTimer)
+            noticeTimer = setTimeout(() => setPeerNotice(null), duration)
+        }
 
         const joinRoom = () => {
             const liked = useGameStore.getState().likedGames.map((game) => game.id)
@@ -54,9 +68,11 @@ export function useRoomSocket({ roomId, filter, enabled }: UseRoomSocketOptions)
         }
 
         const handlePlayerJoined = (data: { message: string }) => {
-            setPeerNotice(data.message)
-            clearTimeout(noticeTimer)
-            noticeTimer = setTimeout(() => setPeerNotice(null), 3000)
+            showNotice({ message: data.message, kind: "joined" }, JOINED_NOTICE_MS)
+        }
+
+        const handlePlayerLeft = (data: { message: string }) => {
+            showNotice({ message: data.message, kind: "left" }, LEFT_NOTICE_MS)
         }
 
         const handleMatch = ({ gameId }: { gameId: number }) => {
@@ -79,13 +95,12 @@ export function useRoomSocket({ roomId, filter, enabled }: UseRoomSocketOptions)
         socket.on("room_setup", handleSetup)
         socket.on("room_error", handleRoomError)
         socket.on("player_joined", handlePlayerJoined)
+        socket.on("player_left", handlePlayerLeft)
         socket.on("match", handleMatch)
 
-        if (socket.connected) {
-            joinRoom()
-        } else {
-            socket.connect()
-        }
+        acquireSocket()
+
+        if (socket.connected) joinRoom()
 
         return () => {
             clearTimeout(noticeTimer)
@@ -94,8 +109,12 @@ export function useRoomSocket({ roomId, filter, enabled }: UseRoomSocketOptions)
             socket.off("room_setup", handleSetup)
             socket.off("room_error", handleRoomError)
             socket.off("player_joined", handlePlayerJoined)
+            socket.off("player_left", handlePlayerLeft)
             socket.off("match", handleMatch)
-            socket.disconnect()
+
+            if (socket.connected) socket.emit("leave_room", { roomId })
+
+            releaseSocket()
         }
     }, [enabled, roomId, filter])
 

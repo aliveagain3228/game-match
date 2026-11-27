@@ -1,15 +1,19 @@
 'use client'
 
 import { useEffect, useRef, useState } from "react"
-import Link from "next/link"
-import { AnimatePresence } from "framer-motion"
+import { useRouter } from "next/navigation"
+import { AnimatePresence } from "motion/react"
 import { useSession } from "next-auth/react"
+import { ArrowLeftIcon, CheckIcon, LinkIcon, TrophyIcon } from "@phosphor-icons/react"
 import { getGames } from "@/services/rawg.service"
 import { getMatches } from "@/services/matches.service"
 import { useGameStore } from "@/store/useGameStore"
+import { useLeaveGuard } from "@/store/useLeaveGuard"
 import { useRoomSocket } from "@/hooks/useRoomSocket"
+import AmbientCover from "./AmbientCover"
 import GameCard from "./GameCard"
 import MatchOverlay from "./MatchOverlay"
+import LeaveRoomDialog from "./LeaveRoomDialog"
 import MatchHistory from "./MatchHistory"
 
 interface SwipeContainerProps {
@@ -20,7 +24,9 @@ interface SwipeContainerProps {
 const PREFETCH_THRESHOLD = 3
 
 export default function SwipeContainer({ roomId, filter }: SwipeContainerProps) {
+    const router = useRouter()
     const { status } = useSession()
+    const pendingHref = useLeaveGuard((state) => state.pendingHref)
     const {
         games,
         history,
@@ -47,6 +53,12 @@ export default function SwipeContainer({ roomId, filter }: SwipeContainerProps) 
     const isAliveRef = useRef(true)
 
     const currentPage = nextPage ?? setup?.startPage ?? null
+
+    useEffect(() => {
+        useLeaveGuard.getState().setRoomActive(true)
+
+        return () => useLeaveGuard.getState().setRoomActive(false)
+    }, [])
 
     useEffect(() => {
         isAliveRef.current = true
@@ -145,52 +157,95 @@ export default function SwipeContainer({ roomId, filter }: SwipeContainerProps) 
         }
     }
 
+    const handleConfirmLeave = () => {
+        const guard = useLeaveGuard.getState()
+        const href = guard.pendingHref ?? "/"
+
+        guard.cancelLeave()
+        router.push(href)
+    }
+
     const matchedGame = matchedGameId === null
         ? undefined
         : likedGames.find((game) => game.id === matchedGameId)
-
-    if (matchedGame) {
-        return <MatchOverlay game={matchedGame} onContinue={clearMatch} />
-    }
 
     const visibleError = status === "unauthenticated"
         ? "Please sign in to join a room."
         : roomError ?? (games.length === 0 ? loadError : null)
 
     return (
-        <div className="flex items-center justify-center min-h-screen bg-sky-50 overflow-hidden">
-            <div className="absolute top-0 left-0 w-full p-4 bg-sky-950/90 backdrop-blur-md flex justify-between items-center z-40 border-b border-sky-800 shadow-md">
-                <div className="flex gap-3">
-                    <Link
-                        href="/"
-                        className="flex items-center gap-2 text-white font-bold bg-sky-800 px-4 py-2 rounded-xl hover:bg-sky-700 transition-all"
+        <div className="relative flex min-h-screen items-center justify-center overflow-hidden px-4 pt-36 pb-10">
+            <AmbientCover src={currentGame?.background_image ?? null} />
+
+            <div className="fixed inset-x-0 top-16 z-40 flex items-center justify-between border-b border-white/10 bg-sky-950/60 px-4 py-3 backdrop-blur-md sm:px-8">
+                <div className="flex gap-2 sm:gap-3">
+                    <button
+                        type="button"
+                        aria-label="Leave room"
+                        onClick={() => useLeaveGuard.getState().requestLeave("/")}
+                        className="flex h-10 w-10 items-center justify-center rounded-xl border border-white/10 bg-white/5 text-sky-100 transition-all hover:bg-white/10"
                     >
-                        ⬅ Lobby
-                    </Link>
+                        <ArrowLeftIcon size={20} weight="bold" />
+                    </button>
                     <button
                         type="button"
                         onClick={handleCopyCode}
-                        className="flex items-center gap-2 bg-white px-4 py-2 rounded-xl shadow-md border border-sky-200 hover:bg-sky-100 hover:scale-105 transition-transform text-sky-900 font-bold"
+                        className="flex items-center gap-2 rounded-xl border border-white/10 bg-white/5 px-3 py-2 text-sm font-bold text-sky-100 transition-all hover:bg-white/10 sm:px-4"
                     >
-                        {isCopied ? "✅ Copied" : "🔗 Copy Code"}
+                        {isCopied ? <CheckIcon size={18} weight="bold" className="text-emerald-400" /> : <LinkIcon size={18} weight="bold" />}
+                        {isCopied ? "Copied" : "Copy code"}
                     </button>
                 </div>
 
                 <button
                     type="button"
                     onClick={() => setIsHistoryOpen(true)}
-                    className="flex items-center gap-2 bg-sky-500 text-white px-5 py-2 rounded-xl font-bold hover:bg-sky-400 transition-all shadow-md"
+                    className="flex items-center gap-2 rounded-xl bg-sky-500 px-3 py-2 text-sm font-bold text-sky-950 shadow-lg transition-all hover:bg-sky-400 sm:px-4"
                 >
-                    🏆 Matches
-                    <span className="bg-sky-700 px-2 py-0.5 rounded-full text-sm">
+                    <TrophyIcon size={18} weight="fill" />
+                    Matches
+                    <span className="rounded-full bg-sky-950 px-2 py-0.5 text-xs text-sky-200">
                         {matchedGames.length}
                     </span>
                 </button>
             </div>
 
             {peerNotice && (
-                <div className="absolute top-24 z-40 bg-emerald-500 text-white font-bold px-5 py-2 rounded-full shadow-lg">
-                    {peerNotice}
+                <div
+                    className={`fixed top-32 left-1/2 z-40 -translate-x-1/2 rounded-full px-5 py-2 font-bold shadow-lg ${
+                        peerNotice.kind === "left" ? "bg-amber-400 text-amber-950" : "bg-emerald-500 text-white"
+                    }`}
+                >
+                    {peerNotice.message}
+                </div>
+            )}
+
+            {visibleError ? (
+                <div className="relative z-10 rounded-2xl border border-rose-400/30 bg-rose-950/60 px-6 py-4 text-center text-lg font-bold text-rose-300 backdrop-blur-md">
+                    {visibleError}
+                </div>
+            ) : currentGame ? (
+                <div className="relative z-10">
+                    <AnimatePresence mode="wait" custom={exitDirection}>
+                        <GameCard
+                            key={currentGame.id}
+                            game={currentGame}
+                            onLike={handleLike}
+                            onDislike={handleDislike}
+                            onUndo={handleUndo}
+                        />
+                    </AnimatePresence>
+                </div>
+            ) : setup && !hasMore ? (
+                <div className="relative z-10 rounded-2xl border border-white/10 bg-white/5 px-6 py-4 text-2xl font-bold text-sky-100 backdrop-blur-md">
+                    No more games available!
+                </div>
+            ) : (
+                <div className="relative z-10 flex flex-col items-center gap-6">
+                    <div className="h-[60dvh] w-[90vw] max-w-sm animate-pulse rounded-3xl border border-white/10 bg-white/5" />
+                    <p className="text-lg font-bold text-sky-200">
+                        {setup ? "Loading games..." : "Connecting to the room..."}
+                    </p>
                 </div>
             )}
 
@@ -198,31 +253,14 @@ export default function SwipeContainer({ roomId, filter }: SwipeContainerProps) 
                 <MatchHistory games={matchedGames} onClose={() => setIsHistoryOpen(false)} />
             )}
 
-            {visibleError ? (
-                <div className="text-xl text-rose-500 font-bold bg-rose-100 px-6 py-4 rounded-2xl border border-rose-200 z-10">
-                    {visibleError}
-                </div>
-            ) : currentGame ? (
-                <AnimatePresence mode="wait" custom={exitDirection}>
-                    <GameCard
-                        key={currentGame.id}
-                        game={currentGame}
-                        onLike={handleLike}
-                        onDislike={handleDislike}
-                        onUndo={handleUndo}
-                    />
-                </AnimatePresence>
-            ) : setup && !hasMore ? (
-                <div className="text-2xl font-bold text-sky-900 z-10">
-                    No more games available!
-                </div>
-            ) : (
-                <div className="flex flex-col items-center animate-pulse z-10">
-                    <div className="text-6xl mb-4">⏳</div>
-                    <p className="text-xl font-bold text-sky-900">
-                        {setup ? "Loading games..." : "Connecting to the room..."}
-                    </p>
-                </div>
+            {matchedGame && <MatchOverlay game={matchedGame} onContinue={clearMatch} />}
+
+            {pendingHref !== null && (
+                <LeaveRoomDialog
+                    roomId={roomId}
+                    onStay={() => useLeaveGuard.getState().cancelLeave()}
+                    onLeave={handleConfirmLeave}
+                />
             )}
         </div>
     )

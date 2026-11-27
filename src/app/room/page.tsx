@@ -6,8 +6,8 @@ export default function RoomPage() {
         <main>
             <Suspense
                 fallback={
-                    <div className="flex items-center justify-center min-h-screen bg-sky-50">
-                        <p className="text-xl font-bold text-sky-900 animate-pulse">Loading...</p>
+                    <div className="flex min-h-screen items-center justify-center">
+                        <p className="animate-pulse text-xl font-bold text-sky-200">Loading...</p>
                     </div>
                 }
             >
