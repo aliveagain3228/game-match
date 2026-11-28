@@ -1,6 +1,6 @@
 import Image from "next/image"
 import { motion, useMotionValue, useTransform, type Variants } from "motion/react"
-import { Heart, Undo2, X } from "lucide-react"
+import { ArrowCounterClockwiseIcon, HeartIcon, XIcon } from "@phosphor-icons/react"
 import type { GameTypes } from "@/types/game"
 
 interface GameCardProps {
@@ -133,32 +133,41 @@ export default function GameCard({ game, onLike, onDislike, onUndo }: GameCardPr
             </motion.div>
 
             <div className="mt-8 flex items-center justify-center gap-6">
-                <button
+                <motion.button
                     type="button"
                     aria-label="Dislike"
-                    className="flex h-16 w-16 items-center justify-center rounded-full border border-white/15 bg-white/10 text-rose-300 shadow-xl backdrop-blur-md transition-all hover:scale-105 hover:bg-rose-500/20"
+                    whileHover={{ scale: 1.1 }}
+                    whileTap={{ scale: 0.85, rotate: -8 }}
+                    transition={{ type: "spring", stiffness: 400, damping: 15 }}
+                    className="flex h-16 w-16 items-center justify-center rounded-full border border-white/15 bg-white/10 text-rose-300 shadow-xl backdrop-blur-md transition-colors hover:bg-rose-500/20"
                     onClick={onDislike}
                 >
-                    <X size={32} strokeWidth={3} />
-                </button>
+                    <XIcon size={32} weight="bold" />
+                </motion.button>
 
-                <button
+                <motion.button
                     type="button"
                     aria-label="Undo"
-                    className="flex h-12 w-12 items-center justify-center rounded-full border border-white/15 bg-white/10 text-sky-200 shadow-md backdrop-blur-md transition-all hover:scale-105 hover:bg-white/20"
+                    whileHover={{ scale: 1.1 }}
+                    whileTap={{ scale: 0.85, rotate: -90 }}
+                    transition={{ type: "spring", stiffness: 400, damping: 15 }}
+                    className="flex h-12 w-12 items-center justify-center rounded-full border border-white/15 bg-white/10 text-sky-200 shadow-md backdrop-blur-md transition-colors hover:bg-white/20"
                     onClick={onUndo}
                 >
-                    <Undo2 size={22} strokeWidth={3} />
-                </button>
+                    <ArrowCounterClockwiseIcon size={22} weight="bold" />
+                </motion.button>
 
-                <button
+                <motion.button
                     type="button"
                     aria-label="Like"
-                    className="flex h-16 w-16 items-center justify-center rounded-full bg-sky-500 text-white shadow-[0_0_30px_rgba(14,165,233,0.55)] transition-all hover:scale-105 hover:bg-sky-400"
+                    whileHover={{ scale: 1.1 }}
+                    whileTap={{ scale: 0.85, rotate: 8 }}
+                    transition={{ type: "spring", stiffness: 400, damping: 15 }}
+                    className="flex h-16 w-16 items-center justify-center rounded-full bg-sky-500 text-white shadow-[0_0_30px_rgba(14,165,233,0.55)] transition-colors hover:bg-sky-400"
                     onClick={onLike}
                 >
-                    <Heart fill="currentColor" size={30} strokeWidth={3} />
-                </button>
+                    <HeartIcon size={30} weight="fill" />
+                </motion.button>
             </div>
         </div>
     )

@@ -2,7 +2,7 @@
 
 import { useEffect, useRef, useState } from "react"
 import { useRouter } from "next/navigation"
-import { AnimatePresence } from "motion/react"
+import { AnimatePresence, motion } from "motion/react"
 import { useSession } from "next-auth/react"
 import { ArrowLeftIcon, CheckIcon, LinkIcon, TrophyIcon } from "@phosphor-icons/react"
 import { getGames } from "@/services/rawg.service"
@@ -15,6 +15,7 @@ import GameCard from "./GameCard"
 import MatchOverlay from "./MatchOverlay"
 import LeaveRoomDialog from "./LeaveRoomDialog"
 import MatchHistory from "./MatchHistory"
+import GameLoader from "./GameLoader"
 
 interface SwipeContainerProps {
     roomId: string
@@ -203,10 +204,16 @@ export default function SwipeContainer({ roomId, filter }: SwipeContainerProps) 
                     className="flex items-center gap-2 rounded-xl bg-sky-500 px-3 py-2 text-sm font-bold text-sky-950 shadow-lg transition-all hover:bg-sky-400 sm:px-4"
                 >
                     <TrophyIcon size={18} weight="fill" />
-                    Matches
-                    <span className="rounded-full bg-sky-950 px-2 py-0.5 text-xs text-sky-200">
+                    All matches
+                    <motion.span
+                        key={matchedGames.length}
+                        initial={{ scale: 1.8 }}
+                        animate={{ scale: 1 }}
+                        transition={{ type: "spring", stiffness: 500, damping: 12 }}
+                        className="rounded-full bg-sky-950 px-2 py-0.5 text-xs text-sky-200"
+                    >
                         {matchedGames.length}
-                    </span>
+                    </motion.span>
                 </button>
             </div>
 
@@ -241,11 +248,8 @@ export default function SwipeContainer({ roomId, filter }: SwipeContainerProps) 
                     No more games available!
                 </div>
             ) : (
-                <div className="relative z-10 flex flex-col items-center gap-6">
-                    <div className="h-[60dvh] w-[90vw] max-w-sm animate-pulse rounded-3xl border border-white/10 bg-white/5" />
-                    <p className="text-lg font-bold text-sky-200">
-                        {setup ? "Loading games..." : "Connecting to the room..."}
-                    </p>
+                <div className="relative z-10">
+                    <GameLoader label={setup ? "Loading games" : "Connecting"} />
                 </div>
             )}
 

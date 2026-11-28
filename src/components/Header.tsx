@@ -55,9 +55,10 @@ export default function Header() {
     return (
         <>
             <motion.header
-                initial={{ y: -100, opacity: 0 }}
-                animate={{ y: 0, opacity: 1 }}
-                transition={{ type: "spring", stiffness: 100, damping: 20 }}
+                initial={{ scaleY: 0, opacity: 0 }}
+                animate={{ scaleY: 1, opacity: 1 }}
+                transition={{ type: "spring", stiffness: 140, damping: 18 }}
+                style={{ originY: 0 }}
                 className="fixed top-0 left-0 z-50 grid h-16 w-full grid-cols-[1fr_auto_1fr] items-center gap-2 border-b border-white/10 bg-sky-950/70 px-4 backdrop-blur-md sm:px-8"
             >
                 <div className="flex items-center gap-2 sm:gap-4">

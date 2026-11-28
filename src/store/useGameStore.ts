@@ -93,7 +93,7 @@ export const useGameStore = create<GameState>()(
 
             addMatchedGame: (game) => set((state) => {
                 if (state.matchedGames.some((item) => item.id === game.id)) return state
-                return { matchedGames: [...state.matchedGames, game] }
+                return { matchedGames: [game, ...state.matchedGames] }
             }),
 
             setMatchedGames: (games) => set({ matchedGames: games }),

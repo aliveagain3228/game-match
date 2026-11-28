@@ -38,7 +38,7 @@ export default function MatchHistory({ games, onClose }: MatchHistoryProps) {
                 <div className="mx-auto mb-6 h-1.5 w-12 rounded-full bg-white/20 sm:hidden" />
 
                 <div className="mb-8 flex items-center justify-between">
-                    <h2 className="text-3xl font-black text-white">Our games</h2>
+                    <h2 className="text-3xl font-black text-white">All matches</h2>
                     <button
                         type="button"
                         aria-label="Close"

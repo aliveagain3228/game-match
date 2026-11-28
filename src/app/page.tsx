@@ -6,8 +6,10 @@ import { useSession } from 'next-auth/react'
 import { SlidersHorizontalIcon } from '@phosphor-icons/react'
 import { checkGameCount } from '@/services/rawg.service'
 import { buildRoomUrl, createRoomCode } from '@/lib/room'
+import AnimatedTitle from '@/components/AnimatedTitle'
 import DecorCards from '@/components/DecorCards'
 import SettingModal from '@/components/SettingModal'
+import { motion } from 'motion/react'
 
 export default function Home() {
     const router = useRouter()
@@ -77,9 +79,7 @@ export default function Home() {
         <div className="relative flex min-h-screen flex-col items-center justify-center overflow-hidden px-4 pt-24 pb-16 text-white">
             <DecorCards />
 
-            <h1 className="relative mb-10 text-center text-5xl font-black text-sky-400 drop-shadow-lg sm:text-6xl">
-                Game<span className="text-white">Match</span>
-            </h1>
+            <AnimatedTitle first="Game" second="Match" />
 
             <div className="relative flex w-full max-w-sm flex-col gap-6 rounded-3xl border border-white/10 bg-sky-900/40 p-8 shadow-2xl backdrop-blur-xl">
                 <button
@@ -92,16 +92,20 @@ export default function Home() {
                 </button>
 
                 <div className="flex flex-col gap-2">
-                    <button
+                    <motion.button
                         type="button"
                         onClick={handleCreateRoom}
                         disabled={isChecking}
-                        className={`w-full rounded-xl py-4 text-xl font-bold text-white shadow-[0_0_30px_rgba(14,165,233,0.35)] transition-all ${
-                            isChecking ? 'cursor-not-allowed bg-sky-700 opacity-70' : 'bg-sky-500 hover:scale-105 hover:bg-sky-400'
+                        whileHover={isChecking ? undefined : { scale: 1.04 }}
+                        whileTap={isChecking ? undefined : { scale: 0.96 }}
+                        animate={isChecking ? { scale: [1, 1.03, 1] } : { scale: 1 }}
+                        transition={isChecking ? { duration: 1, repeat: Infinity } : { type: 'spring', stiffness: 400, damping: 20 }}
+                        className={`w-full rounded-xl py-4 text-xl font-bold text-white shadow-[0_0_30px_rgba(14,165,233,0.35)] transition-colors ${
+                            isChecking ? 'cursor-not-allowed bg-sky-700 opacity-70' : 'bg-sky-500 hover:bg-sky-400'
                         }`}
                     >
                         {isChecking ? 'Checking...' : 'Create room'}
-                    </button>
+                    </motion.button>
                     {createError && (
                         <p className="text-center text-sm font-bold text-rose-400">{createError}</p>
                     )}
